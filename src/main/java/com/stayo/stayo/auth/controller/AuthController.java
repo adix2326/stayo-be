@@ -59,9 +59,4 @@ public class AuthController {
             throw new InvalidTokenException("Invalid Token");
         }
     }
-
-    @GetMapping("/test")
-    public ResponseEntity<String> test() {
-        return ResponseEntity.ok("StayO backend is running...");
-    }
 }
