@@ -29,3 +29,5 @@ target/
 *.imltarget/
 
 *.env
+
+src/main/resources/application-dev.properties
