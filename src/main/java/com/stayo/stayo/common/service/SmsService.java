@@ -1,50 +1,110 @@
 package com.stayo.stayo.common.service;
 
-import com.twilio.Twilio;
-import com.twilio.rest.api.v2010.account.Message;
-import com.twilio.type.PhoneNumber;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Base64;
 
 @Service
 @Slf4j
 public class SmsService {
 
-    @Value("${twilio.account-sid}")
-    private String accountSid;
+    @Value("${sms.gateway.provider:cloud}")
+    private String provider;
 
-    @Value("${twilio.auth-token}")
-    private String authToken;
+    @Value("${sms.gateway.local.url:http://10.253.193.19:8080/message}")
+    private String localUrl;
 
-    @Value("${twilio.phone-number}")
-    private String twilioPhoneNumber;
+    @Value("${sms.gateway.local.username:sms}")
+    private String localUsername;
 
-//    public void sendOtp(String phoneNumber, String otp) {
-//        try {
-//            Twilio.init(accountSid, authToken);
-//
-//            Message message = Message.creator(
-//                            new PhoneNumber(twilioPhoneNumber),
-//                            new PhoneNumber(phoneNumber)
-//                    )
-//                    .setBody("Your StayO verification code is: " + otp + ". Valid for 5 minutes. Do not share this code.")
-//                    .create();
-//
-//            log.info("OTP sent successfully to {}: {}", phoneNumber, message.getSid());
-//        } catch (Exception e) {
-//            log.error("Failed to send OTP to {}: {}", phoneNumber, e.getMessage());
-//            throw new RuntimeException("Failed to send OTP via SMS: " + e.getMessage(), e);
-//        }
-//    }
+    @Value("${sms.gateway.local.password:eNdUOw9H}")
+    private String localPassword;
+
+    @Value("${sms.gateway.cloud.url:https://api.sms-gate.app:443/3rdparty/v1/messages}")
+    private String cloudUrl;
+
+    @Value("${sms.gateway.cloud.username:Q8QCCR}")
+    private String cloudUsername;
+
+    @Value("${sms.gateway.cloud.password:kbxzx0t0off3gm}")
+    private String cloudPassword;
+
+    @Value("${sms.gateway.cloud.device-id:MiCjpLO_kh7Ay9sT_TNdF}")
+    private String cloudDeviceId;
+
+    private final RestTemplate restTemplate = new RestTemplate();
 
     public void sendOtp(String phoneNumber, String otp) {
-        // Static OTP for development
-        log.info("=================================================");
-        log.info("OTP REQUEST FOR TESTING");
-        log.info("Phone Number: {}", phoneNumber);
-        log.info("OTP Code: {}", otp);
-        log.info("Valid for 5 minutes");
-        log.info("=================================================");
+        boolean isCloud = "cloud".equalsIgnoreCase(provider);
+        String targetUrl = isCloud ? cloudUrl : localUrl;
+        String username = isCloud ? cloudUsername : localUsername;
+        String password = isCloud ? cloudPassword : localPassword;
+
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            if (username != null && !username.isEmpty()) {
+                String auth = username + ":" + password;
+                String encodedAuth = Base64.getEncoder().encodeToString(auth.getBytes());
+                headers.set("Authorization", "Basic " + encodedAuth);
+            }
+
+            // Construct payload:
+            // {
+            //   "textMessage": { "text": "StayO OTP code: 123456" },
+            //   "phoneNumbers": ["+91XXXXXXXXXX"],
+            //   "deviceId": "MiCjpLO_kh7Ay9sT_TNdF" (for cloud) OR "simNumber": 1 (for local)
+            // }
+            Map<String, Object> textMessage = new HashMap<>();
+            String message = String.format("""
+                Your StayO verification code is %s.
+                
+                This OTP is valid for %d minutes.
+                
+                Do not share this code with anyone.
+                
+                - Team StayO
+                """, otp, 5);
+
+            textMessage.put("text", message);
+
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("textMessage", textMessage);
+            payload.put("phoneNumbers", Collections.singletonList(phoneNumber));
+
+            if (isCloud) {
+                if (cloudDeviceId != null && !cloudDeviceId.isEmpty()) {
+                    payload.put("deviceId", cloudDeviceId);
+                }
+            } else {
+                payload.put("simNumber", 1);
+            }
+
+            HttpEntity<Map<String, Object>> request = new HttpEntity<>(payload, headers);
+
+            log.info("Sending SMS OTP to {} via {} gateway {}", phoneNumber, provider, targetUrl);
+            restTemplate.postForEntity(targetUrl, request, String.class);
+            log.info("SMS OTP sent successfully to {}", phoneNumber);
+
+        } catch (Exception e) {
+            log.error("Failed to send SMS via {} gateway to {}: {}", provider, phoneNumber, e.getMessage());
+            // Fallback: log to console so the flow doesn't break if phone is disconnected
+            log.info("=================================================");
+            log.info("FALLBACK SMS OTP REQUEST FOR TESTING");
+            log.info("Phone Number: {}", phoneNumber);
+            log.info("OTP Code: {}", otp);
+            log.info("=================================================");
+        }
     }
 }
