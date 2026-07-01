@@ -21,7 +21,7 @@ public class SmsService {
     @Value("${sms.gateway.provider:cloud}")
     private String provider;
 
-    @Value("${sms.gateway.local.url:http://10.121.100.178:8080/message}")
+    @Value("${sms.gateway.local.url:http://10.253.193.19:8080/message}")
     private String localUrl;
 
     @Value("${sms.gateway.local.username:sms}")
@@ -30,16 +30,16 @@ public class SmsService {
     @Value("${sms.gateway.local.password:eNdUOw9H}")
     private String localPassword;
 
-    @Value("${sms.gateway.cloud.url:https://api.sms-gate.app/3rdparty/v1/messages}")
+    @Value("${sms.gateway.cloud.url:https://api.sms-gate.app:443/3rdparty/v1/messages}")
     private String cloudUrl;
 
-    @Value("${sms.gateway.cloud.username:}")
+    @Value("${sms.gateway.cloud.username:Q8QCCR}")
     private String cloudUsername;
 
-    @Value("${sms.gateway.cloud.password:}")
+    @Value("${sms.gateway.cloud.password:kbxzx0t0off3gm}")
     private String cloudPassword;
 
-    @Value("${sms.gateway.cloud.device-id:}")
+    @Value("${sms.gateway.cloud.device-id:MiCjpLO_kh7Ay9sT_TNdF}")
     private String cloudDeviceId;
 
     private final RestTemplate restTemplate = new RestTemplate();
@@ -67,7 +67,17 @@ public class SmsService {
             //   "deviceId": "MiCjpLO_kh7Ay9sT_TNdF" (for cloud) OR "simNumber": 1 (for local)
             // }
             Map<String, Object> textMessage = new HashMap<>();
-            textMessage.put("text", "StayO OTP code: " + otp);
+            String message = String.format("""
+                Your StayO verification code is %s.
+                
+                This OTP is valid for %d minutes.
+                
+                Do not share this code with anyone.
+                
+                - Team StayO
+                """, otp, 5);
+
+            textMessage.put("text", message);
 
             Map<String, Object> payload = new HashMap<>();
             payload.put("textMessage", textMessage);
