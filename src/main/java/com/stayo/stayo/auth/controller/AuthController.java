@@ -2,12 +2,10 @@ package com.stayo.stayo.auth.controller;
 
 import com.stayo.stayo.auth.service.AuthService;
 import com.stayo.stayo.auth.dto.*;
-import com.stayo.stayo.common.exception.InvalidTokenException;
-import com.stayo.stayo.common.exception.MissingAuthorizationException;
 import com.stayo.stayo.common.security.JwtProvider;
+import com.stayo.stayo.common.util.AuthUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.Value;
 import org.springframework.web.bind.annotation.*;
 import lombok.RequiredArgsConstructor;
 import jakarta.validation.Valid;
@@ -23,6 +21,7 @@ public class AuthController {
 
     private final AuthService authService;
     private final JwtProvider jwtProvider;
+    private final AuthUtil authUtil;
 
     @Operation(summary = "Send OTP to mobile number")
     @PostMapping("/otp/send")
@@ -47,16 +46,17 @@ public class AuthController {
             @Valid @RequestBody UpdateUserDto request){
 
         log.info("Update user details request");
-        if(token == null || token.trim().isEmpty()){
-            throw new MissingAuthorizationException("Authorization header is required");
-        }
-
-        try{
-            String userId = jwtProvider.extractUserId(token);
-            AuthResponse response = authService.updateUserDetails(userId, request);
-            return ResponseEntity.ok(response);
-        }catch (RuntimeException e){
-            throw new InvalidTokenException("Invalid Token");
-        }
+        String userId = authUtil.extractUserIdFromToken(token);
+        AuthResponse response = authService.updateUserDetails(userId, request);
+        return ResponseEntity.ok(response);
     }
-}
+
+    @Operation(summary = "Logout user and invalidate token")
+    @PostMapping("/logout")
+    public ResponseEntity<LogoutResponse> logout(
+            @RequestHeader(value = "Authorization", required = false) String token) {
+        log.info("Logout request received");
+        authService.logout(token);
+        return ResponseEntity.ok(new LogoutResponse(true, "Logged out successfully"));
+    }
+}
