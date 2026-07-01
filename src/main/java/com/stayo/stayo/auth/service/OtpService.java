@@ -37,11 +37,10 @@ public class OtpService {
     public void sendOtpToPhone(String mobileNumber) {
         otpRepository.deleteByMobileNumberAndVerifiedFalse(mobileNumber);
 
-//        String otp = generateOtp();
+        String otp = generateOtp();
         OtpRequest otpRequest = OtpRequest.builder()
                 .mobileNumber(mobileNumber)
-//                .otp(otp)
-                .otp(staticOtpCode)
+                .otp(otp)
                 .createdAt(LocalDateTime.now())
                 .expiryAt(LocalDateTime.now().plusMinutes(otpExpiryMinutes))
                 .attempts(0)
@@ -49,14 +48,14 @@ public class OtpService {
                 .build();
 
         otpRepository.save(otpRequest);
-//        smsService.sendOtp(mobileNumber, otp);
+        smsService.sendOtp(mobileNumber, otp);
         log.info("OTP sent to phone: {}", mobileNumber);
 
         // Log instead of sending SMS (for development)
         log.info("=================================================");
         log.info("OTP REQUEST FOR TESTING");
         log.info("Phone Number: {}", mobileNumber);
-        log.info("OTP Code: {}", staticOtpCode);
+        log.info("OTP Code: {}", otp);
         log.info("Valid for {} minutes", otpExpiryMinutes);
         log.info("=================================================");
     }
