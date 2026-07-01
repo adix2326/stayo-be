@@ -7,6 +7,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import jakarta.annotation.PostConstruct;
+
 @Service
 @Slf4j
 public class SmsService {
@@ -20,31 +22,26 @@ public class SmsService {
     @Value("${twilio.phone-number}")
     private String twilioPhoneNumber;
 
-//    public void sendOtp(String phoneNumber, String otp) {
-//        try {
-//            Twilio.init(accountSid, authToken);
-//
-//            Message message = Message.creator(
-//                            new PhoneNumber(twilioPhoneNumber),
-//                            new PhoneNumber(phoneNumber)
-//                    )
-//                    .setBody("Your StayO verification code is: " + otp + ". Valid for 5 minutes. Do not share this code.")
-//                    .create();
-//
-//            log.info("OTP sent successfully to {}: {}", phoneNumber, message.getSid());
-//        } catch (Exception e) {
-//            log.error("Failed to send OTP to {}: {}", phoneNumber, e.getMessage());
-//            throw new RuntimeException("Failed to send OTP via SMS: " + e.getMessage(), e);
-//        }
-//    }
+    @PostConstruct
+    public void init() {
+        log.info("Initializing Twilio with Account SID: {}", accountSid);
+        Twilio.init(accountSid, authToken);
+    }
 
     public void sendOtp(String phoneNumber, String otp) {
-        // Static OTP for development
-        log.info("=================================================");
-        log.info("OTP REQUEST FOR TESTING");
-        log.info("Phone Number: {}", phoneNumber);
-        log.info("OTP Code: {}", otp);
-        log.info("Valid for 5 minutes");
-        log.info("=================================================");
+        try {
+            log.info("Sending OTP via Twilio to {}", phoneNumber);
+            Message message = Message.creator(
+                            new PhoneNumber(phoneNumber), // To
+                            new PhoneNumber(twilioPhoneNumber), // From
+                            "Your StayO verification code is: " + otp + ". Valid for 5 minutes. Do not share this code."
+                    )
+                    .create();
+
+            log.info("OTP sent successfully to {}: {}", phoneNumber, message.getSid());
+        } catch (Exception e) {
+            log.error("Failed to send OTP to {}: {}", phoneNumber, e.getMessage());
+            throw new RuntimeException("Failed to send OTP via SMS: " + e.getMessage(), e);
+        }
     }
 }

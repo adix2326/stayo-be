@@ -1,6 +1,9 @@
 package com.stayo.stayo.auth.service;
 
+import com.stayo.stayo.auth.entity.BlacklistedToken;
+import com.stayo.stayo.auth.repository.BlacklistedTokenRepository;
 import com.stayo.stayo.common.exception.InvalidMobileNumberException;
+import com.stayo.stayo.common.exception.InvalidTokenException;
 import com.stayo.stayo.common.exception.UserNotFoundException;
 import com.stayo.stayo.user.entity.User;
 import com.stayo.stayo.user.entity.Role;
@@ -12,6 +15,7 @@ import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.Date;
 
 @Service
 @RequiredArgsConstructor
@@ -21,10 +25,12 @@ public class AuthService {
     private final UserRepository userRepository;
     private final JwtProvider jwtProvider;
     private final OtpService otpService;
+    private final BlacklistedTokenRepository blacklistedTokenRepository;
+
 
     public String sendOtpToPhone(String mobileNumber) {
-        if (!mobileNumber.matches("^\\+91[6-9]\\d{9}$")) {
-            throw new InvalidMobileNumberException("Invalid mobile number format. Use +91XXXXXXXXXX");
+        if (!mobileNumber.matches("^\\+[1-9]\\d{1,14}$")) {
+            throw new InvalidMobileNumberException("Invalid mobile number format. Use E.164 format (e.g. +91XXXXXXXXXX)");
         }
 
 //        if (userRepository.existsByPhone(mobileNumber)) {
@@ -125,4 +131,32 @@ public class AuthService {
                 .role(user.getRole().toString())
                 .build();
     }
-}
+
+    public void logout(String token) {
+        if (token == null || token.trim().isEmpty()) {
+            throw new InvalidTokenException("Invalid JWT");
+        }
+
+        String jwtToken = token;
+        if (token.startsWith("Bearer ")) {
+            jwtToken = token.substring(7).trim();
+        }
+
+        if (blacklistedTokenRepository.existsByToken(jwtToken)) {
+            throw new InvalidTokenException("Token already invalidated");
+        }
+
+        try {
+            Date expiration = jwtProvider.extractExpiration(jwtToken);
+            BlacklistedToken blacklistedToken = BlacklistedToken.builder()
+                    .token(jwtToken)
+                    .expiryDate(expiration.toInstant())
+                    .build();
+            blacklistedTokenRepository.save(blacklistedToken);
+            log.info("Token successfully blacklisted: {}", jwtToken);
+        } catch (RuntimeException e) {
+            log.error("Failed to blacklist token during logout: {}", e.getMessage());
+            throw new InvalidTokenException("Invalid JWT");
+        }
+    }
+}

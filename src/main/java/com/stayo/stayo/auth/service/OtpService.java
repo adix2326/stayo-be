@@ -32,16 +32,18 @@ public class OtpService {
     @Value("${otp.static-code:123456}")
     private String staticOtpCode;
 
+    @Value("${otp.use-static:true}")
+    private boolean useStaticOtp;
+
     private final Random random = new Random();
 
     public void sendOtpToPhone(String mobileNumber) {
         otpRepository.deleteByMobileNumberAndVerifiedFalse(mobileNumber);
 
-//        String otp = generateOtp();
+        String otp = useStaticOtp ? staticOtpCode : generateOtp();
         OtpRequest otpRequest = OtpRequest.builder()
                 .mobileNumber(mobileNumber)
-//                .otp(otp)
-                .otp(staticOtpCode)
+                .otp(otp)
                 .createdAt(LocalDateTime.now())
                 .expiryAt(LocalDateTime.now().plusMinutes(otpExpiryMinutes))
                 .attempts(0)
@@ -49,16 +51,19 @@ public class OtpService {
                 .build();
 
         otpRepository.save(otpRequest);
-//        smsService.sendOtp(mobileNumber, otp);
-        log.info("OTP sent to phone: {}", mobileNumber);
 
-        // Log instead of sending SMS (for development)
-        log.info("=================================================");
-        log.info("OTP REQUEST FOR TESTING");
-        log.info("Phone Number: {}", mobileNumber);
-        log.info("OTP Code: {}", staticOtpCode);
-        log.info("Valid for {} minutes", otpExpiryMinutes);
-        log.info("=================================================");
+        if (useStaticOtp) {
+            log.info("Using static OTP for testing: {}", mobileNumber);
+            log.info("=================================================");
+            log.info("OTP REQUEST FOR TESTING");
+            log.info("Phone Number: {}", mobileNumber);
+            log.info("Static OTP Code: {}", staticOtpCode);
+            log.info("Valid for {} minutes", otpExpiryMinutes);
+            log.info("=================================================");
+        } else {
+            smsService.sendOtp(mobileNumber, otp);
+            log.info("OTP sent to phone: {}", mobileNumber);
+        }
     }
 
     public boolean verifyOtp(String mobileNumber, String otp) {

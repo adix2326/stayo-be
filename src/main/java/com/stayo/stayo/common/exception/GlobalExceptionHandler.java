@@ -99,8 +99,9 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(InvalidTokenException.class)
-    public ResponseEntity<ApiError> handleInvalidToken(InvalidTokenException ex, HttpServletRequest req) {
-        ApiError body = new ApiError(HttpStatus.FORBIDDEN.value(), "Invalid Token", ex.getMessage(), req.getRequestURI());
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
+    public ResponseEntity<java.util.Map<String, String>> handleInvalidToken(InvalidTokenException ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(java.util.Map.of("message", ex.getMessage()));
     }
 }
+

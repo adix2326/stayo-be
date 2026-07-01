@@ -98,4 +98,22 @@ public class JwtProvider {
             return false;
         }
     }
+
+    public Date extractExpiration(String token) {
+        try {
+            return Jwts.parser()
+                    .setSigningKey(getSigningKey())
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody()
+                    .getExpiration();
+        } catch (ExpiredJwtException e) {
+            log.error("JWT token is expired: {}", e.getMessage());
+            throw new RuntimeException("JWT token is expired");
+        } catch (UnsupportedJwtException | MalformedJwtException | SignatureException | IllegalArgumentException e) {
+            log.error("Invalid JWT token: {}", e.getMessage());
+            throw new RuntimeException("Invalid JWT token");
+        }
+    }
 }
+

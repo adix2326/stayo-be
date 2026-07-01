@@ -10,6 +10,6 @@ import jakarta.validation.constraints.Pattern;
 @AllArgsConstructor
 public class OtpRequestDto {
     @NotBlank(message = "Mobile number is required")
-    @Pattern(regexp = "^\\+91[6-9]\\d{9}$")
+    @Pattern(regexp = "^\\+[1-9]\\d{1,14}$", message = "Mobile number must be in E.164 format (e.g. +91XXXXXXXXXX)")
     private String mobileNumber;
 }
