@@ -1,20 +1,18 @@
-package com.stayo.stayo.auth.dto;
-
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+package com.stayo.stayo.user.dto;
 
 import com.stayo.stayo.user.enums.Gender;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Size;
+import lombok.*;
+
 import java.time.LocalDate;
 
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class UpdateUserDto {
+@Builder
+public class UpdateProfileRequest {
     private String name;
 
     @Email(message = "Invalid Email")
@@ -28,6 +26,7 @@ public class UpdateUserDto {
     private String city;
     private String state;
     private String country;
+
+    @Size(max = 500, message = "Bio must be at most 500 characters")
     private String bio;
-    private String profileImage;
 }

@@ -1,25 +1,20 @@
-package com.stayo.stayo.auth.dto;
-
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+package com.stayo.stayo.user.dto;
 
 import com.stayo.stayo.user.enums.Gender;
+import lombok.*;
+
 import java.time.LocalDate;
 
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class UpdateUserDto {
+@Builder
+public class UserProfileResponse {
+    private String id;
     private String name;
-
-    @Email(message = "Invalid Email")
     private String email;
-
+    private String mobileNumber;
     private Gender gender;
     private LocalDate dateOfBirth;
     private String occupation;
@@ -30,4 +25,6 @@ public class UpdateUserDto {
     private String country;
     private String bio;
     private String profileImage;
+    private boolean profileCompleted;
+    private int completionPercentage;
 }
