@@ -33,13 +33,6 @@ public class AuthService {
             throw new InvalidMobileNumberException("Invalid mobile number format. Use E.164 format (e.g. +91XXXXXXXXXX)");
         }
 
-//        if (userRepository.existsByPhone(mobileNumber)) {
-//            log.info("Phone already registered: {}", mobileNumber);
-//            // Still send OTP for signin
-//            otpService.sendOtpToPhone(mobileNumber);
-//            return "OTP sent to " + mobileNumber;
-//        }
-
         otpService.sendOtpToPhone(mobileNumber);
         log.info("OTP request initiated for phone: {}", mobileNumber);
         return "OTP sent to " + mobileNumber;
@@ -54,6 +47,7 @@ public class AuthService {
         if (existingUser != null) {
             // User already registered, treat as signin
             existingUser.setUpdatedAt(LocalDateTime.now());
+            existingUser.setLastLogin(LocalDateTime.now());
             userRepository.save(existingUser);
             log.info("User signed in: {}", request.getMobileNumber());
 
@@ -83,6 +77,7 @@ public class AuthService {
                 .role(Role.USER)
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
+                .lastLogin(LocalDateTime.now())
                 .build();
 
         userRepository.save(newUser);
@@ -107,9 +102,48 @@ public class AuthService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
 
-        user.setName(updateUserDto.getName());
-        user.setEmail(updateUserDto.getEmail());
-        user.setProfileCompleted(true);
+        if (updateUserDto.getName() != null) {
+            user.setName(updateUserDto.getName());
+        }
+        if (updateUserDto.getEmail() != null) {
+            user.setEmail(updateUserDto.getEmail());
+        }
+        if (updateUserDto.getGender() != null) {
+            user.setGender(updateUserDto.getGender());
+        }
+        if (updateUserDto.getDateOfBirth() != null) {
+            user.setDateOfBirth(updateUserDto.getDateOfBirth());
+        }
+        if (updateUserDto.getOccupation() != null) {
+            user.setOccupation(updateUserDto.getOccupation());
+        }
+        if (updateUserDto.getCollege() != null) {
+            user.setCollege(updateUserDto.getCollege());
+        }
+        if (updateUserDto.getCompany() != null) {
+            user.setCompany(updateUserDto.getCompany());
+        }
+        if (updateUserDto.getCity() != null) {
+            user.setCity(updateUserDto.getCity());
+        }
+        if (updateUserDto.getState() != null) {
+            user.setState(updateUserDto.getState());
+        }
+        if (updateUserDto.getCountry() != null) {
+            user.setCountry(updateUserDto.getCountry());
+        }
+        if (updateUserDto.getBio() != null) {
+            user.setBio(updateUserDto.getBio());
+        }
+        if (updateUserDto.getProfileImage() != null) {
+            user.setProfileImage(updateUserDto.getProfileImage());
+        }
+
+        if (user.getName() != null && !user.getName().trim().isEmpty() &&
+            user.getEmail() != null && !user.getEmail().trim().isEmpty()) {
+            user.setProfileCompleted(true);
+        }
+
         user.setUpdatedAt(LocalDateTime.now());
         userRepository.save(user);
         log.info("User details updated: {}", userId);
@@ -159,4 +193,4 @@ public class AuthService {
             throw new InvalidTokenException("Invalid JWT");
         }
     }
-}
+}
