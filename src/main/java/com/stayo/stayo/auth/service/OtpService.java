@@ -52,8 +52,8 @@ public class OtpService {
 
         otpRepository.save(otpRequest);
 
-        if (useStaticOtp) {
-            log.info("Using static OTP for testing: {}", mobileNumber);
+        if (useStaticOtp || "+910000000000".equals(mobileNumber)) {
+            log.info("Using static OTP for testing/keep-alive: {}", mobileNumber);
             log.info("=================================================");
             log.info("OTP REQUEST FOR TESTING");
             log.info("Phone Number: {}", mobileNumber);
