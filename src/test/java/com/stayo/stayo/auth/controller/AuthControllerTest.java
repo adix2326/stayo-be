@@ -3,6 +3,7 @@ package com.stayo.stayo.auth.controller;
 import com.stayo.stayo.auth.dto.LogoutResponse;
 import com.stayo.stayo.auth.repository.BlacklistedTokenRepository;
 import com.stayo.stayo.common.exception.InvalidTokenException;
+import com.stayo.stayo.common.response.ApiResponse;
 import com.stayo.stayo.common.security.JwtProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,11 +34,13 @@ class AuthControllerTest {
     void testLogoutSuccess() {
         String token = jwtProvider.generateToken("test-user-id");
 
-        ResponseEntity<LogoutResponse> response = authController.logout("Bearer " + token);
+        ResponseEntity<ApiResponse<LogoutResponse>> response = authController.logout("Bearer " + token);
         assertNotNull(response);
         assertEquals(200, response.getStatusCode().value());
         assertTrue(response.getBody().isSuccess());
-        assertEquals("Logged out successfully", response.getBody().getMessage());
+        assertNotNull(response.getBody().getData());
+        assertTrue(response.getBody().getData().isSuccess());
+        assertEquals("Logged out successfully", response.getBody().getData().getMessage());
 
         // Verify it was blacklisted
         assertTrue(blacklistedTokenRepository.existsByToken(token));
