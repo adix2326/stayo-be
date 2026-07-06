@@ -2,6 +2,7 @@ package com.stayo.stayo.auth.controller;
 
 import com.stayo.stayo.auth.service.AuthService;
 import com.stayo.stayo.auth.dto.*;
+import com.stayo.stayo.common.response.ApiResponse;
 import com.stayo.stayo.common.security.JwtProvider;
 import com.stayo.stayo.common.util.AuthUtil;
 import io.swagger.v3.oas.annotations.Operation;
@@ -25,38 +26,39 @@ public class AuthController {
 
     @Operation(summary = "Send OTP to mobile number")
     @PostMapping("/otp/send")
-    public ResponseEntity<String> sendOtp(@Valid @RequestBody OtpRequestDto request) {
+    public ResponseEntity<ApiResponse<String>> sendOtp(@Valid @RequestBody OtpRequestDto request) {
         log.info("OTP send request for phone: {}", request.getMobileNumber());
         String message = authService.sendOtpToPhone(request.getMobileNumber());
-        return ResponseEntity.ok(message);
+        return ResponseEntity.ok(ApiResponse.success(message, "OTP sent successfully"));
     }
 
     @Operation(summary = "Verify OTP and create/login user")
     @PostMapping("/otp/verify")
-    public ResponseEntity<AuthResponse> verifyOtp(@Valid @RequestBody OtpVerifyRequestDto request) {
+    public ResponseEntity<ApiResponse<AuthResponse>> verifyOtp(@Valid @RequestBody OtpVerifyRequestDto request) {
         log.info("OTP verify request for phone: {}", request.getMobileNumber());
         AuthResponse response = authService.verifyOtpAndSignup(request);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponse.success(response, "OTP verified successfully"));
     }
 
     @Operation(summary = "Update user details (name, email)")
     @PutMapping("/update-details")
-    public ResponseEntity<AuthResponse> updateUserDetails(
+    public ResponseEntity<ApiResponse<AuthResponse>> updateUserDetails(
             @RequestHeader(value = "Authorization", required = false) String token,
             @Valid @RequestBody UpdateUserDto request){
 
         log.info("Update user details request");
         String userId = authUtil.extractUserIdFromToken(token);
         AuthResponse response = authService.updateUserDetails(userId, request);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponse.success(response, "User details updated successfully"));
     }
 
     @Operation(summary = "Logout user and invalidate token")
     @PostMapping("/logout")
-    public ResponseEntity<LogoutResponse> logout(
+    public ResponseEntity<ApiResponse<LogoutResponse>> logout(
             @RequestHeader(value = "Authorization", required = false) String token) {
         log.info("Logout request received");
         authService.logout(token);
-        return ResponseEntity.ok(new LogoutResponse(true, "Logged out successfully"));
+        LogoutResponse response = new LogoutResponse(true, "Logged out successfully");
+        return ResponseEntity.ok(ApiResponse.success(response, "Logout successful"));
     }
 }
