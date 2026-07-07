@@ -28,11 +28,4 @@ public class PublicPropertyController {
         List<PropertyResponse> featuredProperties = propertyService.getFeaturedProperties();
         return ResponseEntity.ok(ApiResponse.success(featuredProperties, "Featured properties retrieved successfully"));
     }
-
-    @Operation(summary = "Search and dynamically filter properties with pagination")
-    @GetMapping("/search")
-    public ResponseEntity<ApiResponse<PageResponse<PropertyResponse>>> searchProperties(SearchRequest request){
-        PageResponse<PropertyResponse> searchResult = propertyService.searchProperties(request);
-        return ResponseEntity.ok(ApiResponse.success(searchResult, "Properties retrieved successfully"));
-    }
 }

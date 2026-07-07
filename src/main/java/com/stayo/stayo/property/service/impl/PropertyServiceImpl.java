@@ -3,6 +3,7 @@ package com.stayo.stayo.property.service.impl;
 import com.stayo.stayo.common.response.PageResponse;
 import com.stayo.stayo.property.dto.request.SearchRequest;
 import com.stayo.stayo.property.dto.response.PropertyResponse;
+import com.stayo.stayo.property.dto.response.PropertyCardDTO;
 import com.stayo.stayo.property.entity.Property;
 import com.stayo.stayo.property.repository.PropertyRepository;
 import com.stayo.stayo.property.service.PropertyService;
@@ -34,31 +35,53 @@ public class PropertyServiceImpl implements PropertyService {
                 .collect(Collectors.toList());
     }
 
+    private PropertyResponse mapToPropertyResponse(Property property) {
+        return PropertyResponse.builder()
+                .id(property.getId())
+                .propertyName(property.getPropertyName())
+                .description(property.getDescription())
+                .city(property.getCity())
+                .locality(property.getLocality())
+                .address(property.getAddress())
+                .genderCategory(property.getGenderCategory())
+                .propertyType(property.getPropertyType())
+                .rent(property.getRent())
+                .amenities(property.getAmenities())
+                .images(property.getImages())
+                .rating(property.getRating())
+                .reviewCount(property.getReviewCount())
+                .build();
+    }
+
     @Override
-    public PageResponse<PropertyResponse> searchProperties(SearchRequest request){
+    public PageResponse<PropertyCardDTO> searchProperties(String userId, SearchRequest request){
+        log.info("Performing universal search for user: {}", userId);
         Query query = new Query();
 
         // 1. only filter active properties
         query.addCriteria(Criteria.where("isActive").is(true));
 
-        // 2. dynamic search string: matches propertyname, locality, OR city (case-insensative)
+        // 2. universal search: matches propertyName, locality, city, description, address, OR amenities (case-insensitive)
         if (request.getSearchString() != null && !request.getSearchString().trim().isEmpty()){
             String regex = request.getSearchString().trim();
             query.addCriteria(new Criteria().orOperator(
                     Criteria.where("propertyName").regex(regex, "i"),
                     Criteria.where("locality").regex(regex, "i"),
-                    Criteria.where("city").regex(regex, "i")
+                    Criteria.where("city").regex(regex, "i"),
+                    Criteria.where("description").regex(regex, "i"),
+                    Criteria.where("address").regex(regex, "i"),
+                    Criteria.where("amenities").regex(regex, "i")
             ));
         }
 
         // direct filters
-        // city filter
+        // city filter (case-insensitive)
         if (request.getCity() != null && !request.getCity().trim().isEmpty()){
-            query.addCriteria(Criteria.where("city").is(request.getCity().trim()));
+            query.addCriteria(Criteria.where("city").regex("^" + request.getCity().trim() + "$", "i"));
         }
-        // locality filter
+        // locality filter (case-insensitive)
         if (request.getLocality() != null && !request.getLocality().trim().isEmpty()){
-            query.addCriteria(Criteria.where("locality").is(request.getLocality().trim()));
+            query.addCriteria(Criteria.where("locality").regex("^" + request.getLocality().trim() + "$", "i"));
         }
         // genderCategory filter
         if (request.getGender() != null){
@@ -124,15 +147,15 @@ public class PropertyServiceImpl implements PropertyService {
         List<Property> properties = mongoTemplate.find(query, Property.class);
 
         // 7. map to DTO responses
-        List<PropertyResponse> content = properties.stream()
-                .map(this::mapToPropertyResponse)
+        List<PropertyCardDTO> content = properties.stream()
+                .map(this::mapToPropertyCardDTO)
                 .collect(Collectors.toList());
 
         // 8. pagination calculations
         int totalPages = (int) Math.ceil((double) totalElements / size);
         boolean isLast = (totalPages == 0) || (page >= totalPages - 1);
 
-        return PageResponse.<PropertyResponse>builder()
+        return PageResponse.<PropertyCardDTO>builder()
                 .content(content)
                 .pageNumber(page)
                 .pageSize(size)
@@ -142,22 +165,26 @@ public class PropertyServiceImpl implements PropertyService {
                 .build();
     }
 
-    private PropertyResponse mapToPropertyResponse(Property property) {
-        return PropertyResponse.builder()
+    private PropertyCardDTO mapToPropertyCardDTO(Property property) {
+        String thumbnail = (property.getImages() != null && !property.getImages().isEmpty())
+                ? property.getImages().get(0)
+                : null;
+
+        return PropertyCardDTO.builder()
                 .id(property.getId())
-                .propertyName(property.getPropertyName())
-                .description(property.getDescription())
+                .name(property.getPropertyName())
+                .thumbnail(thumbnail)
                 .city(property.getCity())
                 .locality(property.getLocality())
-                .address(property.getAddress())
-                .genderCategory(property.getGenderCategory())
-                .propertyType(property.getPropertyType())
                 .rent(property.getRent())
-                .amenities(property.getAmenities())
-                .images(property.getImages())
                 .rating(property.getRating())
                 .reviewCount(property.getReviewCount())
+                .verified(true)
+                .gender(property.getGenderCategory())
+                .distance("1.2 km")
+                .wishlist(false)
+                .availableBeds(2)
+                .ownerVerified(true)
                 .build();
     }
-
 }

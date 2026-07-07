@@ -31,7 +31,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(UserNotFoundException.class)
     public ResponseEntity<ApiError> handleUserNotFound(UserNotFoundException ex, HttpServletRequest req) {
-        ApiError body = new ApiError(HttpStatus.NOT_FOUND.value(), "OTP Not Found", ex.getMessage(), req.getRequestURI());
+        ApiError body = new ApiError(HttpStatus.NOT_FOUND.value(), "User Not Found", ex.getMessage(), req.getRequestURI());
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
     }
 
@@ -94,14 +94,20 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MissingAuthorizationException.class)
     public ResponseEntity<ApiError> handleMissingAuthorization(MissingAuthorizationException ex, HttpServletRequest req) {
-        ApiError body = new ApiError(HttpStatus.BAD_REQUEST.value(), "Missing Authorization", ex.getMessage(), req.getRequestURI());
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+        ApiError body = new ApiError(HttpStatus.UNAUTHORIZED.value(), "Missing Authorization", ex.getMessage(), req.getRequestURI());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(body);
     }
 
     @ExceptionHandler(InvalidTokenException.class)
     public ResponseEntity<java.util.Map<String, String>> handleInvalidToken(InvalidTokenException ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(java.util.Map.of("message", ex.getMessage()));
+    }
+
+    @ExceptionHandler(ProfileNotCompletedException.class)
+    public ResponseEntity<ApiError> handleProfileNotCompleted(ProfileNotCompletedException ex, HttpServletRequest req) {
+        ApiError body = new ApiError(HttpStatus.BAD_REQUEST.value(), "Profile Not Completed", ex.getMessage(), req.getRequestURI());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
 }
 
