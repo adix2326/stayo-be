@@ -44,33 +44,54 @@ public class DashboardDataSeeder implements CommandLineRunner {
     }
 
     private void seedBanners() {
-        if (bannerRepository.count() == 0) {
-            log.info("Seeding default dashboard banners...");
-            bannerRepository.saveAll(Arrays.asList(
-                    Banner.builder()
-                            .title("Verified PGs")
-                            .subtitle("Stay with trust")
-                            .imageUrl("https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=600&q=80")
-                            .ctaText("Explore Now")
-                            .redirectType("SEARCH")
-                            .redirectValue("verified=true")
-                            .displayOrder(1)
-                            .createdAt(LocalDateTime.now())
-                            .updatedAt(LocalDateTime.now())
-                            .build(),
-                    Banner.builder()
-                            .title("Premium Co-Living")
-                            .subtitle("Modern spaces for professionals")
-                            .imageUrl("https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=600&q=80")
-                            .ctaText("View Luxury")
-                            .redirectType("SEARCH")
-                            .redirectValue("luxury=true")
-                            .displayOrder(2)
-                            .createdAt(LocalDateTime.now())
-                            .updatedAt(LocalDateTime.now())
-                            .build()
-            ));
-        }
+        bannerRepository.deleteAll(); // Force refresh to load new banners
+        log.info("Seeding default dashboard banners...");
+        bannerRepository.saveAll(Arrays.asList(
+                Banner.builder()
+                        .title("Verified PGs")
+                        .subtitle("Stay with trust")
+                        .imageUrl("https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=600&q=80")
+                        .ctaText("Explore Now")
+                        .redirectType("SEARCH")
+                        .redirectValue("verified=true")
+                        .displayOrder(1)
+                        .createdAt(LocalDateTime.now())
+                        .updatedAt(LocalDateTime.now())
+                        .build(),
+                Banner.builder()
+                        .title("Premium Co-Living")
+                        .subtitle("Modern spaces for professionals")
+                        .imageUrl("https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=600&q=80")
+                        .ctaText("View Luxury")
+                        .redirectType("SEARCH")
+                        .redirectValue("luxury=true")
+                        .displayOrder(2)
+                        .createdAt(LocalDateTime.now())
+                        .updatedAt(LocalDateTime.now())
+                        .build(),
+                Banner.builder()
+                        .title("Zero Brokerage")
+                        .subtitle("Direct booking, no hidden charges")
+                        .imageUrl("https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=600&q=80")
+                        .ctaText("Book Directly")
+                        .redirectType("SEARCH")
+                        .redirectValue("brokerage=zero")
+                        .displayOrder(3)
+                        .createdAt(LocalDateTime.now())
+                        .updatedAt(LocalDateTime.now())
+                        .build(),
+                Banner.builder()
+                        .title("WiFi & Meals\nIncluded")
+                        .subtitle("Hassle-free student living")
+                        .imageUrl("https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=600&q=80")
+                        .ctaText("View Amenities")
+                        .redirectType("SEARCH")
+                        .redirectValue("amenities=wifi,meals")
+                        .displayOrder(4)
+                        .createdAt(LocalDateTime.now())
+                        .updatedAt(LocalDateTime.now())
+                        .build()
+        ));
     }
 
     private void seedCategories() {
