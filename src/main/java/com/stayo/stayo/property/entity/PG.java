@@ -1,9 +1,6 @@
 package com.stayo.stayo.property.entity;
 
 import com.stayo.stayo.shared.enums.GenderCategory;
-import com.stayo.stayo.shared.enums.PropertyType;
-
-
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -23,10 +20,10 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Property {
+public class PG {
     @Id
     private String id;
-    private String propertyName;
+    private String pgName;
     private String description;
 
     @Indexed
@@ -37,8 +34,6 @@ public class Property {
     private String address;
 
     private GenderCategory genderCategory;
-
-    private PropertyType propertyType;
 
     private Double rent; //price per month
 

@@ -1,14 +1,12 @@
 package com.stayo.stayo.property.service.impl;
 
-import com.stayo.stayo.property.dto.PropertyCardDTO;
-import com.stayo.stayo.property.dto.PropertyResponse;
-import com.stayo.stayo.property.entity.Property;
-import com.stayo.stayo.property.repository.PropertyRepository;
-import com.stayo.stayo.property.service.PropertyService;
+import com.stayo.stayo.property.dto.PGCardDTO;
+import com.stayo.stayo.property.dto.PGResponse;
+import com.stayo.stayo.property.entity.PG;
+import com.stayo.stayo.property.repository.PGRepository;
+import com.stayo.stayo.property.service.PGService;
 import com.stayo.stayo.search.dto.SearchRequest;
 import com.stayo.stayo.shared.dto.PageResponse;
-
-
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,29 +23,28 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class PropertyServiceImpl implements PropertyService {
+public class PGServiceImpl implements PGService {
 
-    private final PropertyRepository propertyRepository;
+    private final PGRepository pgRepository;
     private final org.springframework.data.mongodb.core.MongoTemplate mongoTemplate;
 
     @Override
-    public List<PropertyResponse> getFeaturedProperties() {
-        return propertyRepository.findByIsActiveTrueAndIsFeaturedTrue()
+    public List<PGResponse> getFeaturedProperties() {
+        return pgRepository.findByIsActiveTrueAndIsFeaturedTrue()
                 .stream()
-                .map(this::mapToPropertyResponse)
+                .map(this::mapToPGResponse)
                 .collect(Collectors.toList());
     }
 
-    private PropertyResponse mapToPropertyResponse(Property property) {
-        return PropertyResponse.builder()
+    private PGResponse mapToPGResponse(PG property) {
+        return PGResponse.builder()
                 .id(property.getId())
-                .propertyName(property.getPropertyName())
+                .pgName(property.getPgName())
                 .description(property.getDescription())
                 .city(property.getCity())
                 .locality(property.getLocality())
                 .address(property.getAddress())
                 .genderCategory(property.getGenderCategory())
-                .propertyType(property.getPropertyType())
                 .rent(property.getRent())
                 .amenities(property.getAmenities())
                 .images(property.getImages())
@@ -57,18 +54,18 @@ public class PropertyServiceImpl implements PropertyService {
     }
 
     @Override
-    public PageResponse<PropertyCardDTO> searchProperties(String userId, SearchRequest request){
-        log.info("Performing universal search for user: {}", userId);
+    public PageResponse<PGCardDTO> searchPGs(String userId, SearchRequest request) {
+        log.info("Performing universal PG search for user: {}", userId);
         Query query = new Query();
 
         // 1. only filter active properties
         query.addCriteria(Criteria.where("isActive").is(true));
 
-        // 2. universal search: matches propertyName, locality, city, description, address, OR amenities (case-insensitive)
+        // 2. universal search: matches pgName, locality, city, description, address, OR amenities (case-insensitive)
         if (request.getSearchString() != null && !request.getSearchString().trim().isEmpty()){
             String regex = request.getSearchString().trim();
             query.addCriteria(new Criteria().orOperator(
-                    Criteria.where("propertyName").regex(regex, "i"),
+                    Criteria.where("pgName").regex(regex, "i"),
                     Criteria.where("locality").regex(regex, "i"),
                     Criteria.where("city").regex(regex, "i"),
                     Criteria.where("description").regex(regex, "i"),
@@ -89,10 +86,6 @@ public class PropertyServiceImpl implements PropertyService {
         // genderCategory filter
         if (request.getGender() != null){
             query.addCriteria(Criteria.where("genderCategory").is(request.getGender()));
-        }
-        // propertyType filter
-        if (request.getPropertyType() != null){
-            query.addCriteria(Criteria.where("propertyType").is(request.getPropertyType()));
         }
 
         // price boundaries (gte, lte or eq)
@@ -115,7 +108,7 @@ public class PropertyServiceImpl implements PropertyService {
         }
 
         // 3. count matching entries before applying pagination skip/limit
-        long totalElements = mongoTemplate.count(query, Property.class);
+        long totalElements = mongoTemplate.count(query, PG.class);
 
         // 4. Apply sorting
         if(request.getSortBy() != null) {
@@ -147,18 +140,18 @@ public class PropertyServiceImpl implements PropertyService {
         query.with(pageable);
 
         // 6. Query the database
-        List<Property> properties = mongoTemplate.find(query, Property.class);
+        List<PG> properties = mongoTemplate.find(query, PG.class);
 
         // 7. map to DTO responses
-        List<PropertyCardDTO> content = properties.stream()
-                .map(this::mapToPropertyCardDTO)
+        List<PGCardDTO> content = properties.stream()
+                .map(this::mapToPGCardDTO)
                 .collect(Collectors.toList());
 
         // 8. pagination calculations
         int totalPages = (int) Math.ceil((double) totalElements / size);
         boolean isLast = (totalPages == 0) || (page >= totalPages - 1);
 
-        return PageResponse.<PropertyCardDTO>builder()
+        return PageResponse.<PGCardDTO>builder()
                 .content(content)
                 .pageNumber(page)
                 .pageSize(size)
@@ -168,14 +161,14 @@ public class PropertyServiceImpl implements PropertyService {
                 .build();
     }
 
-    private PropertyCardDTO mapToPropertyCardDTO(Property property) {
+    private PGCardDTO mapToPGCardDTO(PG property) {
         String thumbnail = (property.getImages() != null && !property.getImages().isEmpty())
                 ? property.getImages().get(0)
                 : null;
 
-        return PropertyCardDTO.builder()
+        return PGCardDTO.builder()
                 .id(property.getId())
-                .name(property.getPropertyName())
+                .name(property.getPgName())
                 .thumbnail(thumbnail)
                 .city(property.getCity())
                 .locality(property.getLocality())

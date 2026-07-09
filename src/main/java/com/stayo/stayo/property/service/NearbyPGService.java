@@ -1,6 +1,6 @@
 package com.stayo.stayo.property.service;
 
-import com.stayo.stayo.property.entity.Property;
+import com.stayo.stayo.property.entity.PG;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,11 +14,11 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class NearbyPropertyService {
+public class NearbyPGService {
     private final MongoTemplate mongoTemplate;
 
-    public List<Property> getNearbyProperties(String city) {
-        log.info("Fetching nearby properties for city: {}", city);
+    public List<PG> getNearbyPGs(String city) {
+        log.info("Fetching nearby PGs for city: {}", city);
         
         Query query = new Query();
         if (city != null) {
@@ -27,6 +27,6 @@ public class NearbyPropertyService {
         query.addCriteria(Criteria.where("isActive").is(true));
         query.limit(10);
         
-        return mongoTemplate.find(query, Property.class);
+        return mongoTemplate.find(query, PG.class);
     }
 }

@@ -12,8 +12,8 @@ import com.stayo.stayo.dashboard.assembler.DashboardAssembler;
 import com.stayo.stayo.dashboard.dto.DashboardResponseDTO;
 import com.stayo.stayo.dashboard.service.DashboardService;
 import com.stayo.stayo.notification.service.NotificationService;
-import com.stayo.stayo.property.entity.Property;
-import com.stayo.stayo.property.service.NearbyPropertyService;
+import com.stayo.stayo.property.entity.PG;
+import com.stayo.stayo.property.service.NearbyPGService;
 import com.stayo.stayo.property.service.RecommendationService;
 import com.stayo.stayo.shared.exception.ProfileNotCompletedException;
 import com.stayo.stayo.shared.exception.UserNotFoundException;
@@ -38,7 +38,7 @@ public class DashboardServiceImpl implements DashboardService {
     private final PopularSearchService popularSearchService;
     private final QuickFilterService quickFilterService;
     private final CategoryService categoryService;
-    private final NearbyPropertyService nearbyPropertyService;
+    private final NearbyPGService nearbyPGService;
     private final RecommendationService recommendationService;
     private final DashboardAssembler dashboardAssembler;
 
@@ -75,11 +75,11 @@ public class DashboardServiceImpl implements DashboardService {
         CompletableFuture<List<DashboardCategory>> categoriesFuture = CompletableFuture.supplyAsync(
                 () -> categoryService.getCategories()
         );
-        CompletableFuture<List<Property>> nearbyPropertiesFuture = CompletableFuture.supplyAsync(
-                () -> nearbyPropertyService.getNearbyProperties(userCity)
+        CompletableFuture<List<PG>> nearbyPropertiesFuture = CompletableFuture.supplyAsync(
+                () -> nearbyPGService.getNearbyPGs(userCity)
         );
-        CompletableFuture<List<Property>> recommendedPropertiesFuture = CompletableFuture.supplyAsync(
-                () -> recommendationService.getRecommendedProperties(userId)
+        CompletableFuture<List<PG>> recommendedPropertiesFuture = CompletableFuture.supplyAsync(
+                () -> recommendationService.getRecommendedPGs(userId)
         );
 
         // Wait for all parallel fetches to complete
@@ -98,8 +98,8 @@ public class DashboardServiceImpl implements DashboardService {
         List<PopularSearch> popularSearches = popularSearchesFuture.join();
         List<QuickFilter> quickFilters = quickFiltersFuture.join();
         List<DashboardCategory> categories = categoriesFuture.join();
-        List<Property> nearbyProperties = nearbyPropertiesFuture.join();
-        List<Property> recommendedProperties = recommendedPropertiesFuture.join();
+        List<PG> nearbyPGs = nearbyPropertiesFuture.join();
+        List<PG> recommendedPGs = recommendedPropertiesFuture.join();
 
         // 4. Assemble DTO
         DashboardResponseDTO response = dashboardAssembler.assemble(
@@ -109,8 +109,8 @@ public class DashboardServiceImpl implements DashboardService {
                 banners,
                 quickFilters,
                 categories,
-                nearbyProperties,
-                recommendedProperties
+                nearbyPGs,
+                recommendedPGs
         );
 
         long duration = System.currentTimeMillis() - startTime;

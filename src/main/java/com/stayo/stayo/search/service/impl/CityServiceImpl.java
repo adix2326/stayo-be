@@ -1,6 +1,6 @@
 package com.stayo.stayo.search.service.impl;
 
-import com.stayo.stayo.property.repository.PropertyRepository;
+import com.stayo.stayo.property.repository.PGRepository;
 import com.stayo.stayo.search.dto.CityResponse;
 import com.stayo.stayo.search.entity.City;
 import com.stayo.stayo.search.repository.CityRepository;
@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
 public class CityServiceImpl implements CityService {
 
     private final CityRepository cityRepository;
-    private final PropertyRepository propertyRepository;
+    private final PGRepository pgRepository;
 
     @Override
     public List<CityResponse> getPopularCities() {
@@ -32,7 +32,7 @@ public class CityServiceImpl implements CityService {
     }
 
     private CityResponse mapToCityResponse(City city){
-        long count = propertyRepository.countByCityAndIsActiveTrue(city.getName());
+        long count = pgRepository.countByCityAndIsActiveTrue(city.getName());
         return CityResponse.builder()
                 .id(city.getId())
                 .name(city.getName())

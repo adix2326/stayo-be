@@ -9,8 +9,8 @@ import com.stayo.stayo.content.entity.DashboardCategory;
 import com.stayo.stayo.content.entity.PopularSearch;
 import com.stayo.stayo.content.entity.QuickFilter;
 import com.stayo.stayo.dashboard.dto.DashboardResponseDTO;
-import com.stayo.stayo.property.dto.PropertyCardDTO;
-import com.stayo.stayo.property.entity.Property;
+import com.stayo.stayo.property.dto.PGCardDTO;
+import com.stayo.stayo.property.entity.PG;
 import com.stayo.stayo.search.dto.SearchDefaultDTO;
 import com.stayo.stayo.user.dto.UserSummaryDTO;
 import com.stayo.stayo.user.entity.User;
@@ -30,8 +30,8 @@ public class DashboardAssembler {
             List<Banner> banners,
             List<QuickFilter> quickFilters,
             List<DashboardCategory> categories,
-            List<Property> nearbyProperties,
-            List<Property> recommendedProperties) {
+            List<PG> nearbyPGs,
+            List<PG> recommendedPGs) {
 
         UserSummaryDTO userSummary = UserSummaryDTO.builder()
                 .id(user.getId())
@@ -65,12 +65,12 @@ public class DashboardAssembler {
                 .map(this::mapToCategoryDTO)
                 .collect(Collectors.toList());
 
-        List<PropertyCardDTO> nearbyPropertyDTOs = nearbyProperties.stream()
-                .map(this::mapToPropertyCardDTO)
+        List<PGCardDTO> nearbyPropertyDTOs = nearbyPGs.stream()
+                .map(this::mapToPGCardDTO)
                 .collect(Collectors.toList());
 
-        List<PropertyCardDTO> recommendedPropertyDTOs = recommendedProperties.stream()
-                .map(this::mapToPropertyCardDTO)
+        List<PGCardDTO> recommendedPropertyDTOs = recommendedPGs.stream()
+                .map(this::mapToPGCardDTO)
                 .collect(Collectors.toList());
 
         return DashboardResponseDTO.builder()
@@ -80,8 +80,8 @@ public class DashboardAssembler {
                 .heroBanners(bannerDTOs)
                 .quickFilters(quickFilterDTOs)
                 .categories(categoryDTOs)
-                .nearbyProperties(nearbyPropertyDTOs)
-                .recommendedProperties(recommendedPropertyDTOs)
+                .nearbyPGs(nearbyPropertyDTOs)
+                .recommendedPGs(recommendedPropertyDTOs)
                 .build();
     }
 
@@ -126,14 +126,14 @@ public class DashboardAssembler {
                 .build();
     }
 
-    private PropertyCardDTO mapToPropertyCardDTO(Property entity) {
+    private PGCardDTO mapToPGCardDTO(PG entity) {
         String thumbnail = (entity.getImages() != null && !entity.getImages().isEmpty())
                 ? entity.getImages().get(0)
                 : null;
 
-        return PropertyCardDTO.builder()
+        return PGCardDTO.builder()
                 .id(entity.getId())
-                .name(entity.getPropertyName())
+                .name(entity.getPgName())
                 .thumbnail(thumbnail)
                 .city(entity.getCity())
                 .locality(entity.getLocality())

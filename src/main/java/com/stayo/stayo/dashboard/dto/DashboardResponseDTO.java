@@ -4,7 +4,7 @@ import com.stayo.stayo.content.dto.BannerDTO;
 import com.stayo.stayo.content.dto.DashboardCategoryDTO;
 import com.stayo.stayo.content.dto.PopularSearchDTO;
 import com.stayo.stayo.content.dto.QuickFilterDTO;
-import com.stayo.stayo.property.dto.PropertyCardDTO;
+import com.stayo.stayo.property.dto.PGCardDTO;
 import com.stayo.stayo.search.dto.SearchDefaultDTO;
 import com.stayo.stayo.user.dto.UserSummaryDTO;
 
@@ -26,6 +26,6 @@ public class DashboardResponseDTO {
     private List<BannerDTO> heroBanners;
     private List<QuickFilterDTO> quickFilters;
     private List<DashboardCategoryDTO> categories;
-    private List<PropertyCardDTO> nearbyProperties;
-    private List<PropertyCardDTO> recommendedProperties;
+    private List<PGCardDTO> nearbyPGs;
+    private List<PGCardDTO> recommendedPGs;
 }

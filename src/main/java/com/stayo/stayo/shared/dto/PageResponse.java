@@ -12,7 +12,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PageResponse<T> {
-    private List<T> content; //(Stores the items list, e.g. PropertyResponse)
+    private List<T> content; //(Stores the items list, e.g. PGResponse)
     private int pageNumber;
     private int pageSize;
     private long totalElements;

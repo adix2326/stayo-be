@@ -7,7 +7,7 @@ import com.stayo.stayo.content.service.QuickFilterService;
 import com.stayo.stayo.dashboard.assembler.DashboardAssembler;
 import com.stayo.stayo.dashboard.dto.DashboardResponseDTO;
 import com.stayo.stayo.notification.service.NotificationService;
-import com.stayo.stayo.property.service.NearbyPropertyService;
+import com.stayo.stayo.property.service.NearbyPGService;
 import com.stayo.stayo.property.service.RecommendationService;
 import com.stayo.stayo.shared.exception.ProfileNotCompletedException;
 import com.stayo.stayo.shared.exception.UserNotFoundException;
@@ -49,7 +49,7 @@ class DashboardServiceImplTest {
     private CategoryService categoryService;
 
     @Mock
-    private NearbyPropertyService nearbyPropertyService;
+    private NearbyPGService nearbyPGService;
 
     @Mock
     private RecommendationService recommendationService;
@@ -95,8 +95,8 @@ class DashboardServiceImplTest {
         when(popularSearchService.getPopularSearches()).thenReturn(Collections.emptyList());
         when(quickFilterService.getQuickFilters()).thenReturn(Collections.emptyList());
         when(categoryService.getCategories()).thenReturn(Collections.emptyList());
-        when(nearbyPropertyService.getNearbyProperties("Pune")).thenReturn(Collections.emptyList());
-        when(recommendationService.getRecommendedProperties("test-user-id")).thenReturn(Collections.emptyList());
+        when(nearbyPGService.getNearbyPGs("Pune")).thenReturn(Collections.emptyList());
+        when(recommendationService.getRecommendedPGs("test-user-id")).thenReturn(Collections.emptyList());
 
         DashboardResponseDTO expectedDto = DashboardResponseDTO.builder().build();
         when(dashboardAssembler.assemble(eq(user), eq(3), anyList(), anyList(), anyList(), anyList(), anyList(), anyList()))

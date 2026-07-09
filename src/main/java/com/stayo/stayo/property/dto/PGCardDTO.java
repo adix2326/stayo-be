@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class PropertyCardDTO {
+public class PGCardDTO {
     private String id;
     private String name;
     private String thumbnail;

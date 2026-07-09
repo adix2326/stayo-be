@@ -1,6 +1,6 @@
 package com.stayo.stayo.property.service;
 
-import com.stayo.stayo.property.entity.Property;
+import com.stayo.stayo.property.entity.PG;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,15 +18,15 @@ import java.util.List;
 public class RecommendationService {
     private final MongoTemplate mongoTemplate;
 
-    public List<Property> getRecommendedProperties(String userId) {
-        log.info("Fetching recommended properties for user: {}", userId);
+    public List<PG> getRecommendedPGs(String userId) {
+        log.info("Fetching recommended PGs for user: {}", userId);
 
         Aggregation aggregation = Aggregation.newAggregation(
                 Aggregation.match(Criteria.where("isActive").is(true)),
                 Aggregation.sample(10)
         );
 
-        AggregationResults<Property> results = mongoTemplate.aggregate(aggregation, "properties", Property.class);
+        AggregationResults<PG> results = mongoTemplate.aggregate(aggregation, "properties", PG.class);
         return results.getMappedResults();
     }
 }

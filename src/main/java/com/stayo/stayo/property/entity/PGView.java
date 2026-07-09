@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class PropertyView {
+public class PGView {
     @Id
     private String id;
     @Indexed

@@ -1,6 +1,6 @@
 package com.stayo.stayo.config;
 
-import com.stayo.stayo.property.entity.Property;
+import com.stayo.stayo.property.entity.PG;
 
 
 
@@ -22,7 +22,7 @@ public class OpenApiConfig {
                 .info(new Info()
                         .title("StayO API Documentation")
                         .version("1.0")
-                        .description("StayO Backend Co-living & Property Rental API documentation."))
+                        .description("StayO Backend Co-living & PG Rental API documentation."))
                 .addSecurityItem(new SecurityRequirement()
                         .addList(securitySchemeName))
                 .components(new Components()

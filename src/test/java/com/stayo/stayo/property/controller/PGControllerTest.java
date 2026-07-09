@@ -1,14 +1,13 @@
 package com.stayo.stayo.property.controller;
 
 import com.stayo.stayo.auth.security.JwtProvider;
-import com.stayo.stayo.property.dto.PropertyCardDTO;
-import com.stayo.stayo.property.entity.Property;
-import com.stayo.stayo.property.repository.PropertyRepository;
+import com.stayo.stayo.property.dto.PGCardDTO;
+import com.stayo.stayo.property.entity.PG;
+import com.stayo.stayo.property.repository.PGRepository;
 import com.stayo.stayo.search.dto.SearchRequest;
 import com.stayo.stayo.shared.dto.ApiResponse;
 import com.stayo.stayo.shared.dto.PageResponse;
 import com.stayo.stayo.shared.enums.GenderCategory;
-import com.stayo.stayo.shared.enums.PropertyType;
 import com.stayo.stayo.shared.exception.InvalidTokenException;
 import com.stayo.stayo.shared.exception.MissingAuthorizationException;
 import com.stayo.stayo.user.entity.User;
@@ -22,21 +21,20 @@ import org.springframework.http.ResponseEntity;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
-import java.util.Collections;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
-class PropertyControllerTest {
+class PGControllerTest {
 
     @Autowired
-    private PropertyController propertyController;
+    private PGController pgController;
 
     @Autowired
     private UserRepository userRepository;
 
     @Autowired
-    private PropertyRepository propertyRepository;
+    private PGRepository pgRepository;
 
     @Autowired
     private JwtProvider jwtProvider;
@@ -47,7 +45,7 @@ class PropertyControllerTest {
     @BeforeEach
     void setUp() {
         userRepository.deleteAll();
-        propertyRepository.deleteAll();
+        pgRepository.deleteAll();
 
         // Create and save test user
         User user = User.builder()
@@ -60,14 +58,13 @@ class PropertyControllerTest {
         validToken = "Bearer " + jwtProvider.generateToken(savedUser.getId());
 
         // Create and save test properties
-        Property p1 = Property.builder()
-                .propertyName("Wakad Cozy PG")
-                .description("Affordable hostel with high-speed internet")
+        PG p1 = PG.builder()
+                .pgName("Wakad Cozy PG")
+                .description("Affordable PG with high-speed internet")
                 .city("Pune")
                 .locality("Wakad")
                 .address("Near College Rd, Pune")
                 .genderCategory(GenderCategory.BOYS)
-                .propertyType(PropertyType.PG)
                 .rent(7500.0)
                 .amenities(Arrays.asList("WiFi", "AC"))
                 .isFeatured(true)
@@ -75,14 +72,13 @@ class PropertyControllerTest {
                 .createdAt(LocalDateTime.now())
                 .build();
 
-        Property p2 = Property.builder()
-                .propertyName("Grace Girls Stay")
+        PG p2 = PG.builder()
+                .pgName("Grace Girls Stay")
                 .description("Comfortable and safe stay for girls")
                 .city("Mumbai")
                 .locality("Andheri")
                 .address("Andheri East, Mumbai")
                 .genderCategory(GenderCategory.GIRLS)
-                .propertyType(PropertyType.HOSTEL)
                 .rent(9500.0)
                 .amenities(Arrays.asList("WiFi", "Food"))
                 .isFeatured(false)
@@ -90,7 +86,7 @@ class PropertyControllerTest {
                 .createdAt(LocalDateTime.now())
                 .build();
 
-        propertyRepository.saveAll(Arrays.asList(p1, p2));
+        pgRepository.saveAll(Arrays.asList(p1, p2));
     }
 
     @Test
@@ -98,15 +94,15 @@ class PropertyControllerTest {
         SearchRequest request = new SearchRequest();
         request.setSearchString("Wakad");
 
-        ResponseEntity<ApiResponse<PageResponse<PropertyCardDTO>>> response = 
-                propertyController.searchProperties(validToken, request);
+        ResponseEntity<ApiResponse<PageResponse<PGCardDTO>>> response = 
+                pgController.searchPGs(validToken, request);
 
         assertNotNull(response);
         assertEquals(200, response.getStatusCode().value());
         assertNotNull(response.getBody());
         assertTrue(response.getBody().isSuccess());
 
-        PageResponse<PropertyCardDTO> pageResponse = response.getBody().getData();
+        PageResponse<PGCardDTO> pageResponse = response.getBody().getData();
         assertNotNull(pageResponse);
         assertEquals(1, pageResponse.getContent().size());
         assertEquals("Wakad Cozy PG", pageResponse.getContent().get(0).getName());
@@ -114,12 +110,12 @@ class PropertyControllerTest {
 
     @Test
     void testSearchProperties_UniversalMatching() {
-        // Search by description keyword
+        // Search by name keyword
         SearchRequest requestDesc = new SearchRequest();
-        requestDesc.setSearchString("hostel");
+        requestDesc.setSearchString("Cozy");
 
-        ResponseEntity<ApiResponse<PageResponse<PropertyCardDTO>>> responseDesc = 
-                propertyController.searchProperties(validToken, requestDesc);
+        ResponseEntity<ApiResponse<PageResponse<PGCardDTO>>> responseDesc = 
+                pgController.searchPGs(validToken, requestDesc);
         assertEquals(1, responseDesc.getBody().getData().getContent().size());
         assertEquals("Wakad Cozy PG", responseDesc.getBody().getData().getContent().get(0).getName());
 
@@ -127,8 +123,8 @@ class PropertyControllerTest {
         SearchRequest requestAmenity = new SearchRequest();
         requestAmenity.setSearchString("Food");
 
-        ResponseEntity<ApiResponse<PageResponse<PropertyCardDTO>>> responseAmenity = 
-                propertyController.searchProperties(validToken, requestAmenity);
+        ResponseEntity<ApiResponse<PageResponse<PGCardDTO>>> responseAmenity = 
+                pgController.searchPGs(validToken, requestAmenity);
         assertEquals(1, responseAmenity.getBody().getData().getContent().size());
         assertEquals("Grace Girls Stay", responseAmenity.getBody().getData().getContent().get(0).getName());
     }
@@ -137,7 +133,7 @@ class PropertyControllerTest {
     void testSearchProperties_MissingToken() {
         SearchRequest request = new SearchRequest();
         assertThrows(MissingAuthorizationException.class, () -> {
-            propertyController.searchProperties(null, request);
+            pgController.searchPGs(null, request);
         });
     }
 
@@ -145,7 +141,7 @@ class PropertyControllerTest {
     void testSearchProperties_InvalidToken() {
         SearchRequest request = new SearchRequest();
         assertThrows(InvalidTokenException.class, () -> {
-            propertyController.searchProperties("Bearer invalid_token_here", request);
+            pgController.searchPGs("Bearer invalid_token_here", request);
         });
     }
 }

@@ -1,6 +1,6 @@
 package com.stayo.stayo.property.repository;
 
-import com.stayo.stayo.property.entity.Property;
+import com.stayo.stayo.property.entity.PG;
 
 
 
@@ -8,8 +8,8 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 
 import java.util.List;
 
-public interface PropertyRepository extends MongoRepository<Property, String> {
+public interface PGRepository extends MongoRepository<PG, String> {
     long countByCityAndIsActiveTrue(String city);
-    List<Property> findByIsActiveTrueAndIsFeaturedTrue();
+    List<PG> findByIsActiveTrueAndIsFeaturedTrue();
 }
 
