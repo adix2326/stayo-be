@@ -1,11 +1,13 @@
 package com.stayo.stayo.user.service;
 
-import com.stayo.stayo.common.exception.UserNotFoundException;
+import com.stayo.stayo.shared.enums.Gender;
+import com.stayo.stayo.shared.exception.UserNotFoundException;
 import com.stayo.stayo.user.dto.UpdateProfileRequest;
 import com.stayo.stayo.user.dto.UserProfileResponse;
 import com.stayo.stayo.user.entity.User;
-import com.stayo.stayo.user.enums.Gender;
 import com.stayo.stayo.user.repository.UserRepository;
+
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

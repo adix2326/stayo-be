@@ -1,15 +1,19 @@
 package com.stayo.stayo.auth.service;
 
+import com.stayo.stayo.auth.dto.AuthResponse;
+import com.stayo.stayo.auth.dto.OtpVerifyRequestDto;
 import com.stayo.stayo.auth.entity.BlacklistedToken;
 import com.stayo.stayo.auth.repository.BlacklistedTokenRepository;
-import com.stayo.stayo.common.exception.InvalidMobileNumberException;
-import com.stayo.stayo.common.exception.InvalidTokenException;
-import com.stayo.stayo.common.exception.UserNotFoundException;
-import com.stayo.stayo.user.entity.User;
+import com.stayo.stayo.auth.security.JwtProvider;
+import com.stayo.stayo.shared.exception.InvalidMobileNumberException;
+import com.stayo.stayo.shared.exception.InvalidTokenException;
+import com.stayo.stayo.shared.exception.UserNotFoundException;
+import com.stayo.stayo.user.dto.UpdateUserDto;
 import com.stayo.stayo.user.entity.Role;
+import com.stayo.stayo.user.entity.User;
 import com.stayo.stayo.user.repository.UserRepository;
-import com.stayo.stayo.common.security.JwtProvider;
-import com.stayo.stayo.auth.dto.*;
+
+
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;

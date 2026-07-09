@@ -1,12 +1,14 @@
 package com.stayo.stayo.auth.service;
 
-import com.stayo.stayo.common.exception.InvalidOtpException;
-import com.stayo.stayo.common.exception.MaxOtpAttemptsExceededException;
-import com.stayo.stayo.common.exception.OtpExpiredException;
-import com.stayo.stayo.common.exception.OtpNotFoundException;
+import com.stayo.stayo.notification.service.SmsService;
+import com.stayo.stayo.shared.exception.InvalidOtpException;
+import com.stayo.stayo.shared.exception.MaxOtpAttemptsExceededException;
+import com.stayo.stayo.shared.exception.OtpExpiredException;
+import com.stayo.stayo.shared.exception.OtpNotFoundException;
 import com.stayo.stayo.user.entity.OtpRequest;
 import com.stayo.stayo.user.repository.OtpRepository;
-import com.stayo.stayo.common.service.SmsService;
+
+
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;

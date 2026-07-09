@@ -1,12 +1,14 @@
 package com.stayo.stayo.property.service.impl;
 
-import com.stayo.stayo.common.response.PageResponse;
-import com.stayo.stayo.property.dto.request.SearchRequest;
-import com.stayo.stayo.property.dto.response.PropertyResponse;
-import com.stayo.stayo.property.dto.response.PropertyCardDTO;
+import com.stayo.stayo.property.dto.PropertyCardDTO;
+import com.stayo.stayo.property.dto.PropertyResponse;
 import com.stayo.stayo.property.entity.Property;
 import com.stayo.stayo.property.repository.PropertyRepository;
 import com.stayo.stayo.property.service.PropertyService;
+import com.stayo.stayo.search.dto.SearchRequest;
+import com.stayo.stayo.shared.dto.PageResponse;
+
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;

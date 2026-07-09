@@ -1,10 +1,17 @@
 package com.stayo.stayo.auth.controller;
 
+import com.stayo.stayo.auth.dto.AuthResponse;
+import com.stayo.stayo.auth.dto.LogoutResponse;
+import com.stayo.stayo.auth.dto.OtpRequestDto;
+import com.stayo.stayo.auth.dto.OtpVerifyRequestDto;
+import com.stayo.stayo.auth.security.JwtProvider;
 import com.stayo.stayo.auth.service.AuthService;
-import com.stayo.stayo.auth.dto.*;
-import com.stayo.stayo.common.response.ApiResponse;
-import com.stayo.stayo.common.security.JwtProvider;
-import com.stayo.stayo.common.util.AuthUtil;
+import com.stayo.stayo.auth.util.AuthUtil;
+import com.stayo.stayo.shared.dto.ApiResponse;
+import com.stayo.stayo.user.dto.UpdateUserDto;
+import com.stayo.stayo.user.entity.User;
+
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;

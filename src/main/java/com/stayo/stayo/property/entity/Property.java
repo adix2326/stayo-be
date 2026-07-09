@@ -1,7 +1,9 @@
 package com.stayo.stayo.property.entity;
 
-import com.stayo.stayo.property.enums.GenderCategory;
-import com.stayo.stayo.property.enums.PropertyType;
+import com.stayo.stayo.shared.enums.GenderCategory;
+import com.stayo.stayo.shared.enums.PropertyType;
+
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

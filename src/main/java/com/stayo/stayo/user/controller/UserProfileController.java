@@ -1,9 +1,12 @@
 package com.stayo.stayo.user.controller;
 
-import com.stayo.stayo.common.util.AuthUtil;
+import com.stayo.stayo.auth.util.AuthUtil;
 import com.stayo.stayo.user.dto.UpdateProfileRequest;
 import com.stayo.stayo.user.dto.UserProfileResponse;
+import com.stayo.stayo.user.entity.User;
 import com.stayo.stayo.user.service.UserProfileService;
+
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

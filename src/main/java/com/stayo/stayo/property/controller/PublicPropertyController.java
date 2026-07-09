@@ -1,10 +1,13 @@
 package com.stayo.stayo.property.controller;
 
-import com.stayo.stayo.common.response.ApiResponse;
-import com.stayo.stayo.common.response.PageResponse;
-import com.stayo.stayo.property.dto.request.SearchRequest;
-import com.stayo.stayo.property.dto.response.PropertyResponse;
+import com.stayo.stayo.property.dto.PropertyResponse;
+import com.stayo.stayo.property.entity.Property;
 import com.stayo.stayo.property.service.PropertyService;
+import com.stayo.stayo.search.dto.SearchRequest;
+import com.stayo.stayo.shared.dto.ApiResponse;
+import com.stayo.stayo.shared.dto.PageResponse;
+
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;

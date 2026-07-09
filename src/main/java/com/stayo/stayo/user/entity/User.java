@@ -1,10 +1,12 @@
 package com.stayo.stayo.user.entity;
 
+import com.stayo.stayo.shared.enums.Gender;
+
+
 import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import com.stayo.stayo.user.enums.Gender;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;

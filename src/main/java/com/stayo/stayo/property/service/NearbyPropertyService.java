@@ -1,6 +1,7 @@
 package com.stayo.stayo.property.service;
 
 import com.stayo.stayo.property.entity.Property;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.mongodb.core.MongoTemplate;
