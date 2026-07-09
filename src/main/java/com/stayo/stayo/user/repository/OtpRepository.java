@@ -3,6 +3,7 @@ package com.stayo.stayo.user.repository;
 import com.stayo.stayo.user.entity.OtpRequest;
 
 
+
 import org.springframework.data.mongodb.repository.MongoRepository;
 
 import java.util.Optional;

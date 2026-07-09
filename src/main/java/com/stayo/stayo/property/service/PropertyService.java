@@ -8,6 +8,7 @@ import com.stayo.stayo.shared.dto.PageResponse;
 
 
 
+
 import java.util.List;
 
 public interface PropertyService {

@@ -3,6 +3,7 @@ package com.stayo.stayo.user.dto;
 import com.stayo.stayo.shared.enums.Gender;
 
 
+
 import lombok.*;
 
 import java.time.LocalDate;

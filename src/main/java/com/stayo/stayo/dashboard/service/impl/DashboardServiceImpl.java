@@ -25,6 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 @Service
 @RequiredArgsConstructor
@@ -56,19 +57,49 @@ public class DashboardServiceImpl implements DashboardService {
             throw new ProfileNotCompletedException("PROFILE_NOT_COMPLETED");
         }
 
-        // 3. Fetch dashboard components
-        int notificationCount = notificationService.getUnreadNotificationCount(userId);
-        List<Banner> banners = bannerService.getActiveBanners();
-        List<PopularSearch> popularSearches = popularSearchService.getPopularSearches();
-        List<QuickFilter> quickFilters = quickFilterService.getQuickFilters();
-        List<DashboardCategory> categories = categoryService.getCategories();
-        
-        // Fetch nearby properties based on user's city
+        // 3. Fetch dashboard components in parallel
         String userCity = user.getCity();
-        List<Property> nearbyProperties = nearbyPropertyService.getNearbyProperties(userCity);
 
-        // Fetch recommended properties
-        List<Property> recommendedProperties = recommendationService.getRecommendedProperties(userId);
+        CompletableFuture<Integer> notificationFuture = CompletableFuture.supplyAsync(
+                () -> notificationService.getUnreadNotificationCount(userId)
+        );
+        CompletableFuture<List<Banner>> bannersFuture = CompletableFuture.supplyAsync(
+                () -> bannerService.getActiveBanners()
+        );
+        CompletableFuture<List<PopularSearch>> popularSearchesFuture = CompletableFuture.supplyAsync(
+                () -> popularSearchService.getPopularSearches()
+        );
+        CompletableFuture<List<QuickFilter>> quickFiltersFuture = CompletableFuture.supplyAsync(
+                () -> quickFilterService.getQuickFilters()
+        );
+        CompletableFuture<List<DashboardCategory>> categoriesFuture = CompletableFuture.supplyAsync(
+                () -> categoryService.getCategories()
+        );
+        CompletableFuture<List<Property>> nearbyPropertiesFuture = CompletableFuture.supplyAsync(
+                () -> nearbyPropertyService.getNearbyProperties(userCity)
+        );
+        CompletableFuture<List<Property>> recommendedPropertiesFuture = CompletableFuture.supplyAsync(
+                () -> recommendationService.getRecommendedProperties(userId)
+        );
+
+        // Wait for all parallel fetches to complete
+        CompletableFuture.allOf(
+                notificationFuture,
+                bannersFuture,
+                popularSearchesFuture,
+                quickFiltersFuture,
+                categoriesFuture,
+                nearbyPropertiesFuture,
+                recommendedPropertiesFuture
+        ).join();
+
+        int notificationCount = notificationFuture.join();
+        List<Banner> banners = bannersFuture.join();
+        List<PopularSearch> popularSearches = popularSearchesFuture.join();
+        List<QuickFilter> quickFilters = quickFiltersFuture.join();
+        List<DashboardCategory> categories = categoriesFuture.join();
+        List<Property> nearbyProperties = nearbyPropertiesFuture.join();
+        List<Property> recommendedProperties = recommendedPropertiesFuture.join();
 
         // 4. Assemble DTO
         DashboardResponseDTO response = dashboardAssembler.assemble(
@@ -83,7 +114,7 @@ public class DashboardServiceImpl implements DashboardService {
         );
 
         long duration = System.currentTimeMillis() - startTime;
-        log.info("Dashboard successfully loaded for user {} in {}ms", userId, duration);
+        log.info("Dashboard successfully loaded for user {} in {}ms (Optimized)", userId, duration);
 
         return response;
     }

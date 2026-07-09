@@ -1,13 +1,19 @@
-package com.stayo.stayo.property.service.impl;
+package com.stayo.stayo.dashboard.service.impl;
 
-import com.stayo.stayo.common.exception.ProfileNotCompletedException;
-import com.stayo.stayo.common.exception.UserNotFoundException;
-import com.stayo.stayo.property.dto.response.DashboardResponseDTO;
-import com.stayo.stayo.property.entity.*;
-import com.stayo.stayo.property.service.*;
+import com.stayo.stayo.content.service.BannerService;
+import com.stayo.stayo.content.service.CategoryService;
+import com.stayo.stayo.content.service.PopularSearchService;
+import com.stayo.stayo.content.service.QuickFilterService;
+import com.stayo.stayo.dashboard.assembler.DashboardAssembler;
+import com.stayo.stayo.dashboard.dto.DashboardResponseDTO;
+import com.stayo.stayo.notification.service.NotificationService;
+import com.stayo.stayo.property.service.NearbyPropertyService;
+import com.stayo.stayo.property.service.RecommendationService;
+import com.stayo.stayo.shared.exception.ProfileNotCompletedException;
+import com.stayo.stayo.shared.exception.UserNotFoundException;
 import com.stayo.stayo.user.entity.User;
 import com.stayo.stayo.user.repository.UserRepository;
-import com.stayo.stayo.user.service.NotificationService;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;

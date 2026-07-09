@@ -3,6 +3,7 @@ package com.stayo.stayo.auth.repository;
 import com.stayo.stayo.auth.entity.BlacklistedToken;
 
 
+
 import org.springframework.data.mongodb.repository.MongoRepository;
 import java.util.Optional;
 

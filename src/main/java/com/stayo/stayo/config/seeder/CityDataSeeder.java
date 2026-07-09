@@ -4,6 +4,7 @@ import com.stayo.stayo.search.entity.City;
 import com.stayo.stayo.search.repository.CityRepository;
 
 
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;

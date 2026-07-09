@@ -1,18 +1,19 @@
 package com.stayo.stayo.property.controller;
 
-import com.stayo.stayo.common.exception.InvalidTokenException;
-import com.stayo.stayo.common.exception.MissingAuthorizationException;
-import com.stayo.stayo.common.response.ApiResponse;
-import com.stayo.stayo.common.response.PageResponse;
-import com.stayo.stayo.common.security.JwtProvider;
-import com.stayo.stayo.property.dto.request.SearchRequest;
-import com.stayo.stayo.property.dto.response.PropertyCardDTO;
+import com.stayo.stayo.auth.security.JwtProvider;
+import com.stayo.stayo.property.dto.PropertyCardDTO;
 import com.stayo.stayo.property.entity.Property;
-import com.stayo.stayo.property.enums.GenderCategory;
-import com.stayo.stayo.property.enums.PropertyType;
 import com.stayo.stayo.property.repository.PropertyRepository;
+import com.stayo.stayo.search.dto.SearchRequest;
+import com.stayo.stayo.shared.dto.ApiResponse;
+import com.stayo.stayo.shared.dto.PageResponse;
+import com.stayo.stayo.shared.enums.GenderCategory;
+import com.stayo.stayo.shared.enums.PropertyType;
+import com.stayo.stayo.shared.exception.InvalidTokenException;
+import com.stayo.stayo.shared.exception.MissingAuthorizationException;
 import com.stayo.stayo.user.entity.User;
 import com.stayo.stayo.user.repository.UserRepository;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

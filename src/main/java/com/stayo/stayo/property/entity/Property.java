@@ -4,6 +4,7 @@ import com.stayo.stayo.shared.enums.GenderCategory;
 import com.stayo.stayo.shared.enums.PropertyType;
 
 
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

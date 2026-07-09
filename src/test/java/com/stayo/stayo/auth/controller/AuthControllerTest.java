@@ -2,9 +2,11 @@ package com.stayo.stayo.auth.controller;
 
 import com.stayo.stayo.auth.dto.LogoutResponse;
 import com.stayo.stayo.auth.repository.BlacklistedTokenRepository;
-import com.stayo.stayo.common.exception.InvalidTokenException;
-import com.stayo.stayo.common.response.ApiResponse;
-import com.stayo.stayo.common.security.JwtProvider;
+import com.stayo.stayo.auth.security.JwtProvider;
+import com.stayo.stayo.shared.dto.ApiResponse;
+import com.stayo.stayo.shared.exception.InvalidTokenException;
+
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

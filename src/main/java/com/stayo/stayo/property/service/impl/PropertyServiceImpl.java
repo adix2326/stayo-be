@@ -9,6 +9,7 @@ import com.stayo.stayo.search.dto.SearchRequest;
 import com.stayo.stayo.shared.dto.PageResponse;
 
 
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
