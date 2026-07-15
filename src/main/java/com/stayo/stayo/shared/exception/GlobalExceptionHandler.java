@@ -39,6 +39,12 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
     }
 
+    @ExceptionHandler(PropertyNotFoundException.class)
+    public ResponseEntity<ApiError> handlePropertyNotFound(PropertyNotFoundException ex, HttpServletRequest req) {
+        ApiError body = new ApiError(HttpStatus.NOT_FOUND.value(), "Property Not Found", ex.getMessage(), req.getRequestURI());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
+    }
+
     @ExceptionHandler(OtpExpiredException.class)
     public ResponseEntity<ApiError> handleOtpExpired(OtpExpiredException ex, HttpServletRequest req) {
         ApiError body = new ApiError(HttpStatus.GONE.value(), "OTP Expired", ex.getMessage(), req.getRequestURI());

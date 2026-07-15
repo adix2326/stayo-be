@@ -35,4 +35,15 @@ public class PGController {
         PageResponse<PGCardDTO> searchResult = pgService.searchPGs(userId, request);
         return ResponseEntity.ok(ApiResponse.success(searchResult, "Properties retrieved successfully"));
     }
+
+    @Operation(summary = "Get full property details by ID (Authenticated & Universal)")
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse<com.stayo.stayo.property.dto.PGResponse>> getPropertyById(
+            @RequestHeader(value = "Authorization", required = false) String token,
+            @PathVariable String id) {
+        log.info("Request for property details ID: {}", id);
+        String userId = authUtil.extractUserIdFromToken(token);
+        com.stayo.stayo.property.dto.PGResponse response = pgService.getPGById(id, userId);
+        return ResponseEntity.ok(ApiResponse.success(response, "Property details retrieved successfully"));
+    }
 }

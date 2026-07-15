@@ -7,6 +7,7 @@ import com.stayo.stayo.property.repository.PGRepository;
 import com.stayo.stayo.property.service.PGService;
 import com.stayo.stayo.search.dto.SearchRequest;
 import com.stayo.stayo.shared.dto.PageResponse;
+import com.stayo.stayo.shared.exception.PropertyNotFoundException;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -54,7 +55,30 @@ public class PGServiceImpl implements PGService {
                 .images(property.getImages())
                 .rating(property.getRating())
                 .reviewCount(property.getReviewCount())
+                .isWishlisted(false) // Default, overridden if user is authenticated
                 .build();
+    }
+
+    @Override
+    public PGResponse getPGById(String propertyId, String userId) {
+        log.info("Fetching property details for ID: {}", propertyId);
+        PG property = pgRepository.findById(propertyId)
+                .orElseThrow(() -> new PropertyNotFoundException("Property not found with ID: " + propertyId));
+
+        PGResponse response = mapToPGResponse(property);
+
+        if (userId != null && !userId.trim().isEmpty()) {
+            try {
+                User user = userRepository.findById(userId).orElse(null);
+                if (user != null && user.getWishlistPropertyIds() != null) {
+                    response.setIsWishlisted(user.getWishlistPropertyIds().contains(propertyId));
+                }
+            } catch (Exception e) {
+                log.error("Failed to load user wishlist for property details: {}", e.getMessage());
+            }
+        }
+
+        return response;
     }
 
     @Override

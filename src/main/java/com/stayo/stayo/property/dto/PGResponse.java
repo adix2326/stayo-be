@@ -25,4 +25,5 @@ public class PGResponse {
     private List<String> images;
     private Double rating;
     private Integer reviewCount;
+    private Boolean isWishlisted;
 }
