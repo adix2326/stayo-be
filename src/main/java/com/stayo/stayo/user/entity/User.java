@@ -2,12 +2,9 @@ package com.stayo.stayo.user.entity;
 
 import com.stayo.stayo.shared.enums.Gender;
 
-
-
 import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
-
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -49,6 +46,13 @@ public class User {
     private Role role;
     private boolean phoneVerified;
     private boolean profileCompleted;
+
+    // Wishlist
+    private java.util.List<String> wishlistPropertyIds;
+
+    public java.util.List<String> getWishlistPropertyIds() {
+        return wishlistPropertyIds == null ? new java.util.ArrayList<>() : wishlistPropertyIds;
+    }
 
     // Audit
     private LocalDateTime createdAt;

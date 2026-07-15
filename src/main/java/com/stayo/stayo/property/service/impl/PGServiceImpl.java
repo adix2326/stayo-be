@@ -17,6 +17,9 @@ import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 
+import com.stayo.stayo.user.entity.User;
+import com.stayo.stayo.user.repository.UserRepository;
+
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -26,6 +29,7 @@ import java.util.stream.Collectors;
 public class PGServiceImpl implements PGService {
 
     private final PGRepository pgRepository;
+    private final UserRepository userRepository;
     private final org.springframework.data.mongodb.core.MongoTemplate mongoTemplate;
 
     @Override
@@ -142,9 +146,23 @@ public class PGServiceImpl implements PGService {
         // 6. Query the database
         List<PG> properties = mongoTemplate.find(query, PG.class);
 
+        List<String> wishlistedIds = null;
+        if (userId != null && !userId.trim().isEmpty()) {
+            try {
+                User user = userRepository.findById(userId).orElse(null);
+                if (user != null) {
+                    wishlistedIds = user.getWishlistPropertyIds();
+                }
+            } catch (Exception e) {
+                log.error("Failed to load user wishlist for mapping search results: {}", e.getMessage());
+            }
+        }
+
+        final List<String> finalWishlistedIds = wishlistedIds;
+
         // 7. map to DTO responses
         List<PGCardDTO> content = properties.stream()
-                .map(this::mapToPGCardDTO)
+                .map(p -> this.mapToPGCardDTO(p, finalWishlistedIds))
                 .collect(Collectors.toList());
 
         // 8. pagination calculations
@@ -161,10 +179,12 @@ public class PGServiceImpl implements PGService {
                 .build();
     }
 
-    private PGCardDTO mapToPGCardDTO(PG property) {
+    private PGCardDTO mapToPGCardDTO(PG property, List<String> wishlistedIds) {
         String thumbnail = (property.getImages() != null && !property.getImages().isEmpty())
                 ? property.getImages().get(0)
                 : null;
+
+        boolean isWishlisted = wishlistedIds != null && wishlistedIds.contains(property.getId());
 
         return PGCardDTO.builder()
                 .id(property.getId())
@@ -178,7 +198,7 @@ public class PGServiceImpl implements PGService {
                 .verified(true)
                 .gender(property.getGenderCategory())
                 .distance("1.2 km")
-                .wishlist(false)
+                .wishlist(isWishlisted)
                 .availableBeds(2)
                 .ownerVerified(true)
                 .build();

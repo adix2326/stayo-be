@@ -33,12 +33,14 @@ public class DashboardAssembler {
             List<PG> nearbyPGs,
             List<PG> recommendedPGs) {
 
+        List<String> wishlistedIds = user.getWishlistPropertyIds();
+
         UserSummaryDTO userSummary = UserSummaryDTO.builder()
                 .id(user.getId())
                 .name(user.getName())
                 .profileImage(user.getProfileImage())
                 .city(user.getCity())
-                .wishlistCount(0) // Default mock
+                .wishlistCount(wishlistedIds != null ? wishlistedIds.size() : 0) // Real count from DB!
                 .notificationCount(notificationCount)
                 .build();
 
@@ -66,11 +68,11 @@ public class DashboardAssembler {
                 .collect(Collectors.toList());
 
         List<PGCardDTO> nearbyPropertyDTOs = nearbyPGs.stream()
-                .map(this::mapToPGCardDTO)
+                .map(p -> this.mapToPGCardDTO(p, wishlistedIds))
                 .collect(Collectors.toList());
 
         List<PGCardDTO> recommendedPropertyDTOs = recommendedPGs.stream()
-                .map(this::mapToPGCardDTO)
+                .map(p -> this.mapToPGCardDTO(p, wishlistedIds))
                 .collect(Collectors.toList());
 
         return DashboardResponseDTO.builder()
@@ -126,10 +128,12 @@ public class DashboardAssembler {
                 .build();
     }
 
-    private PGCardDTO mapToPGCardDTO(PG entity) {
+    private PGCardDTO mapToPGCardDTO(PG entity, List<String> wishlistedIds) {
         String thumbnail = (entity.getImages() != null && !entity.getImages().isEmpty())
                 ? entity.getImages().get(0)
                 : null;
+
+        boolean isWishlisted = wishlistedIds != null && wishlistedIds.contains(entity.getId());
 
         return PGCardDTO.builder()
                 .id(entity.getId())
@@ -143,7 +147,7 @@ public class DashboardAssembler {
                 .verified(true) // Default mock
                 .gender(entity.getGenderCategory())
                 .distance("1.2 km") // Default mock
-                .wishlist(false) // Default mock
+                .wishlist(isWishlisted) // Real wishlist status from DB
                 .availableBeds(2) // Default mock
                 .ownerVerified(true) // Default mock
                 .build();
