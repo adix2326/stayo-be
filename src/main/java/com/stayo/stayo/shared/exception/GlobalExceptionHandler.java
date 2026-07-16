@@ -2,7 +2,8 @@ package com.stayo.stayo.shared.exception;
 
 import com.stayo.stayo.shared.dto.ApiError;
 import com.stayo.stayo.user.entity.User;
-
+import com.stayo.stayo.booking.exception.BookingNotFoundException;
+import com.stayo.stayo.booking.exception.DuplicateBookingException;
 
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -43,6 +44,18 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handlePropertyNotFound(PropertyNotFoundException ex, HttpServletRequest req) {
         ApiError body = new ApiError(HttpStatus.NOT_FOUND.value(), "Property Not Found", ex.getMessage(), req.getRequestURI());
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
+    }
+
+    @ExceptionHandler(BookingNotFoundException.class)
+    public ResponseEntity<ApiError> handleBookingNotFound(BookingNotFoundException ex, HttpServletRequest req) {
+        ApiError body = new ApiError(HttpStatus.NOT_FOUND.value(), "Booking Not Found", ex.getMessage(), req.getRequestURI());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
+    }
+
+    @ExceptionHandler(DuplicateBookingException.class)
+    public ResponseEntity<ApiError> handleDuplicateBooking(DuplicateBookingException ex, HttpServletRequest req) {
+        ApiError body = new ApiError(HttpStatus.CONFLICT.value(), "Duplicate Booking", ex.getMessage(), req.getRequestURI());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
     }
 
     @ExceptionHandler(OtpExpiredException.class)

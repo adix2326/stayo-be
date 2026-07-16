@@ -51,6 +51,9 @@ public class PG {
     @Indexed
     private Boolean isActive;
 
+    @Indexed
+    private String ownerId; // reference to users collection (role: OWNER)
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }
