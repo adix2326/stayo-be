@@ -26,4 +26,23 @@ public class NotificationService {
                 ownerId, pgName, userName);
         // TODO: Integrate Firebase Push Notification for owner
     }
+
+    /**
+     * Notify the user that the PG owner accepted their booking request.
+     * Currently logs the event; will integrate Firebase Push in a future iteration.
+     */
+    public void notifyUserBookingAccepted(String userId, String pgName) {
+        log.info("NOTIFICATION → User [{}]: Your booking request for PG '{}' was accepted", userId, pgName);
+        // TODO: Integrate Firebase Push Notification for user
+    }
+
+    /**
+     * Notify the user that the PG owner rejected their booking request.
+     * Currently logs the event; will integrate Firebase Push in a future iteration.
+     */
+    public void notifyUserBookingRejected(String userId, String pgName, String reason) {
+        log.info("NOTIFICATION → User [{}]: Your booking request for PG '{}' was rejected. Reason: {}",
+                userId, pgName, reason != null ? reason : "not specified");
+        // TODO: Integrate Firebase Push Notification for user
+    }
 }

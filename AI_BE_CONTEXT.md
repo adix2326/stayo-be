@@ -83,11 +83,13 @@ auth/          OTP login, JWT issuing/validation, logout (token blacklist)
   util/        AuthUtil (extracts userId from Authorization header)
 
 booking/       Booking request lifecycle
+  config/      BookingIndexInitializer (partial unique index at startup)
   controller/  BookingController
-  dto/         BookingRequestDTO, BookingResponseDTO, OccupantDTO
+  dto/         BookingRequestDTO, BookingResponseDTO, BookingRejectRequestDTO, OccupantDTO
   entity/      Booking, OccupantInfo
-  enums/       BookingStatus, RoomType
-  exception/   BookingNotFoundException, DuplicateBookingException
+  enums/       BookingStatus, MinimumStay, RoomType
+  exception/   BookingNotFoundException, DuplicateBookingException,
+               InvalidBookingRequestException, InvalidBookingStateException
   mapper/      BookingMapper
   repository/  BookingRepository
   service/     BookingService + impl/BookingServiceImpl
@@ -193,6 +195,9 @@ All authenticated endpoints take the JWT in the `Authorization` header (Bearer f
 | GET | `/api/booking?status=` | List user bookings, optional `BookingStatus` filter |
 | GET | `/api/booking/{bookingId}` | Single booking (ownership checked) |
 | DELETE | `/api/booking/{bookingId}` | Cancel — only allowed while status is `PENDING_OWNER` |
+| GET | `/api/booking/owner?status=` | List booking requests for PGs owned by authenticated owner |
+| PATCH | `/api/booking/owner/{bookingId}/accept` | Accept a pending booking request as the PG owner |
+| PATCH | `/api/booking/owner/{bookingId}/reject` | Reject a booking (optional body `{ "reason": "..." }`) |
 
 ### Infra
 | Method | Path | Purpose |
@@ -233,6 +238,8 @@ Custom exceptions map to `ApiError { status, error, message, path }`:
 | `MissingAuthorizationException`, `InvalidTokenException` | 401 |
 | `ProfileNotCompletedException` | 4xx (dashboard gate) |
 | `DuplicateBookingException` | 409 |
+| `InvalidBookingRequestException` | 400 (occupant count mismatch, room type unavailable, invalid decision) |
+| `InvalidBookingStateException` | 409 (e.g., cancel non-PENDING booking, respond to non-PENDING booking) |
 | Bean-validation failures (`MethodArgumentNotValidException`, `ConstraintViolationException`) | 400 with collected field messages |
 
 New failure modes ⇒ create a custom exception + a handler here. Never return raw stack traces.
@@ -244,15 +251,15 @@ New failure modes ⇒ create a custom exception + a handler here. Never return r
 | Collection | Entity | Key fields / indexes |
 |---|---|---|
 | `users` | `user/entity/User` | name, email, mobileNumber, gender, dateOfBirth, occupation, college, company, city/state/country, bio, profileImage, role, phoneVerified, profileCompleted, `wishlistPropertyIds: List<String>`, audit timestamps |
-| `properties` | `property/entity/PG` | pgName, description, city*, locality*, address, genderCategory (`GenderCategory`: BOYS/GIRLS/UNISEX), rent, amenities[], images[], rating, reviewCount, isFeatured*, isActive*, ownerId*; compound index `(isFeatured, isActive)` (* = indexed) |
-| `bookings` | `booking/entity/Booking` | userId*, pgId*, denormalized pgName/pgLocality/pgCity/pgOwnerId, roomType (SINGLE/DOUBLE), moveInDate, minimumStay, occupantCount (1–4), primaryOccupant + extraOccupants (`OccupantInfo`), specialNote, financial snapshot (monthlyRent, securityDeposit, maintenanceFee, totalPayable), status*; compound indexes `(userId,status,createdAt)` and `(pgId,status)` |
+| `properties` | `property/entity/PG` | pgName, description, city*, locality*, address, genderCategory (`GenderCategory`: BOYS/GIRLS/UNISEX), rent (display price), `rentByRoomType: Map<RoomType, Double>` (per-sharing rent used at booking), `securityDeposit`, amenities[], images[], rating, reviewCount, isFeatured*, isActive*, ownerId*; compound index `(isFeatured, isActive)` (* = indexed) |
+| `bookings` | `booking/entity/Booking` | userId*, pgId*, denormalized pgName/pgLocality/pgCity/pgOwnerId, roomType (SINGLE/DOUBLE), moveInDate, minimumStay (THREE_MONTHS/SIX_MONTHS/TWELVE_MONTHS), occupantCount (1–4), primaryOccupant + extraOccupants (`OccupantInfo`), specialNote, `rejectionReason` (populated only on OWNER_REJECTED), financial snapshot (monthlyRent, securityDeposit, totalPayable), status*; compound indexes `(userId,status,createdAt)` and `(pgId,status)`; partial unique index `(userId,pgId)` where status not in [CANCELLED, OWNER_REJECTED] |
 | `blacklisted_tokens` | `auth/entity/BlacklistedToken` | token, expiryDate |
 | otp requests | `user/entity/OtpRequest` | mobileNumber, otp, expiry, attempt count |
 | pg views | `property/entity/PGView` | user→PG view tracking (recently viewed / recommendations) |
 | cities | `search/entity/City` | seeded by `CityDataSeeder` |
 | banners / categories / popular searches / quick filters | `content/entity/*` | dashboard content, seeded by `DashboardDataSeeder` |
 
-`BookingStatus` lifecycle: `PENDING_OWNER → OWNER_ACCEPTED | OWNER_REJECTED`, user-side `CANCELLED` (only from PENDING_OWNER), `CONFIRMED` reserved for post-payment.
+`BookingStatus` lifecycle: `PENDING_OWNER → OWNER_ACCEPTED | OWNER_REJECTED`, user-side `CANCELLED` (only from PENDING_OWNER), `CONFIRMED` reserved for post-payment. Owner accept/reject is implemented via `PATCH /api/booking/owner/{id}/accept` and `PATCH /api/booking/owner/{id}/reject`.
 
 Booking deliberately **denormalizes** PG display fields and snapshots pricing at creation time — keep this pattern when extending it.
 
@@ -283,11 +290,13 @@ Booking deliberately **denormalizes** PG display fields and snapshots pricing at
 
 Tests live under `src/test/java/com/stayo/stayo/`:
 - `auth/controller/AuthControllerTest`
+- `booking/controller/BookingControllerTest` — Integration test (create, duplicate, cancel, get by ID, list)
+- `booking/service/impl/BookingServiceImplTest` — Mockito unit test (pricing math, duplicates, ownership, cancel/accept/reject state machine, notifications)
 - `dashboard/controller/DashboardControllerTest`, `dashboard/service/impl/DashboardServiceImplTest`
 - `property/controller/PGControllerTest`
 - `common/service/HealthCheckPingServiceTest`
 
-Pattern: MockMvc slice tests for controllers, Mockito unit tests for services. New features should ship with matching tests.
+Pattern: `@SpringBootTest` integration tests for controllers (direct controller invocation, not MockMvc), Mockito unit tests for services. New features should ship with matching tests.
 
 ---
 
@@ -305,7 +314,7 @@ Pattern: MockMvc slice tests for controllers, Mockito unit tests for services. N
 
 ## 13. Future / Planned (not implemented — do not build unless asked)
 
-Owner portal APIs, admin module, reviews, payments/`CONFIRMED` booking flow, refresh tokens, Google/Apple login, Redis caching, ElasticSearch-backed search, Firebase push notifications, role-based authorization.
+Owner portal APIs (full dashboard), admin module, reviews, payments/`CONFIRMED` booking flow, refresh tokens, Google/Apple login, Redis caching, ElasticSearch-backed search, Firebase push notifications, role-based authorization.
 
 ---
 

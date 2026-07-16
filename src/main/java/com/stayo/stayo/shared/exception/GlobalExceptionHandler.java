@@ -1,5 +1,7 @@
 package com.stayo.stayo.shared.exception;
 
+import com.stayo.stayo.booking.exception.InvalidBookingRequestException;
+import com.stayo.stayo.booking.exception.InvalidBookingStateException;
 import com.stayo.stayo.shared.dto.ApiError;
 import com.stayo.stayo.user.entity.User;
 import com.stayo.stayo.booking.exception.BookingNotFoundException;
@@ -55,6 +57,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DuplicateBookingException.class)
     public ResponseEntity<ApiError> handleDuplicateBooking(DuplicateBookingException ex, HttpServletRequest req) {
         ApiError body = new ApiError(HttpStatus.CONFLICT.value(), "Duplicate Booking", ex.getMessage(), req.getRequestURI());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+    }
+
+    @ExceptionHandler(InvalidBookingStateException.class)
+    public ResponseEntity<ApiError> handleInvalidBookingState(InvalidBookingStateException ex, HttpServletRequest req) {
+        ApiError body = new ApiError(HttpStatus.CONFLICT.value(), "Invalid Booking State", ex.getMessage(), req.getRequestURI());
         return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
     }
 
@@ -130,6 +138,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ProfileNotCompletedException.class)
     public ResponseEntity<ApiError> handleProfileNotCompleted(ProfileNotCompletedException ex, HttpServletRequest req) {
         ApiError body = new ApiError(HttpStatus.BAD_REQUEST.value(), "Profile Not Completed", ex.getMessage(), req.getRequestURI());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    @ExceptionHandler(InvalidBookingRequestException.class)
+    public ResponseEntity<ApiError> handleInvalidBookingRequest(InvalidBookingRequestException ex, HttpServletRequest req) {
+        ApiError body = new ApiError(HttpStatus.BAD_REQUEST.value(), "Invalid Booking Request", ex.getMessage(), req.getRequestURI());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
 }

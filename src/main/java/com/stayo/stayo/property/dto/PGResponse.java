@@ -26,4 +26,6 @@ public class PGResponse {
     private Double rating;
     private Integer reviewCount;
     private Boolean isWishlisted;
+    private java.util.Map<com.stayo.stayo.booking.enums.RoomType, Double> rentByRoomType;
+    private Double securityDeposit;
 }

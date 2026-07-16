@@ -56,6 +56,8 @@ public class PGServiceImpl implements PGService {
                 .rating(property.getRating())
                 .reviewCount(property.getReviewCount())
                 .isWishlisted(false) // Default, overridden if user is authenticated
+                .rentByRoomType(property.getRentByRoomType())
+                .securityDeposit(property.getSecurityDeposit())
                 .build();
     }
 

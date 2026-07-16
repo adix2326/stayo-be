@@ -8,6 +8,7 @@ import com.stayo.stayo.content.repository.BannerRepository;
 import com.stayo.stayo.content.repository.DashboardCategoryRepository;
 import com.stayo.stayo.content.repository.PopularSearchRepository;
 import com.stayo.stayo.content.repository.QuickFilterRepository;
+import com.stayo.stayo.booking.enums.RoomType;
 import com.stayo.stayo.property.entity.PG;
 import com.stayo.stayo.property.repository.PGRepository;
 import com.stayo.stayo.shared.enums.GenderCategory;
@@ -22,6 +23,7 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 @Component
 @Slf4j
@@ -226,6 +228,7 @@ public class DashboardDataSeeder implements CommandLineRunner {
                 .address("Phase 1, Near Infosys Gate 3, Hinjewadi, Pune 411057")
                 .genderCategory(GenderCategory.BOYS)
                 .rent(9500.0)
+                .rentByRoomType(Map.of(RoomType.SINGLE, 9500.0, RoomType.DOUBLE, 9500.0 * 0.85, RoomType.TRIPLE, 9500.0 * 0.70, RoomType.FOUR_SHARING, 9500.0 * 0.55))
                 .amenities(Arrays.asList("WiFi", "Food", "AC", "Laundry", "Power Backup", "CCTV"))
                 .images(Arrays.asList(
                     "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=600&q=80",
@@ -244,6 +247,7 @@ public class DashboardDataSeeder implements CommandLineRunner {
                 .address("Baner Road, Near Baner Gym Khana, Baner, Pune 411045")
                 .genderCategory(GenderCategory.BOYS)
                 .rent(7200.0)
+                .rentByRoomType(Map.of(RoomType.SINGLE, 7200.0, RoomType.DOUBLE, 7200.0 * 0.85, RoomType.TRIPLE, 7200.0 * 0.70, RoomType.FOUR_SHARING, 7200.0 * 0.55))
                 .amenities(Arrays.asList("WiFi", "AC", "Parking", "Power Backup", "Study Table", "Wardrobe"))
                 .images(Arrays.asList(
                     "https://images.unsplash.com/photo-1600121848594-d8644e57abab?auto=format&fit=crop&w=600&q=80",
@@ -262,6 +266,7 @@ public class DashboardDataSeeder implements CommandLineRunner {
                 .address("Wakad Chowk, Near D-Mart, Wakad, Pune 411057")
                 .genderCategory(GenderCategory.BOYS)
                 .rent(4500.0)
+                .rentByRoomType(Map.of(RoomType.SINGLE, 4500.0, RoomType.DOUBLE, 4500.0 * 0.85, RoomType.TRIPLE, 4500.0 * 0.70, RoomType.FOUR_SHARING, 4500.0 * 0.55))
                 .amenities(Arrays.asList("WiFi", "Power Backup"))
                 .images(Collections.singletonList(
                     "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=600&q=80"
@@ -279,6 +284,7 @@ public class DashboardDataSeeder implements CommandLineRunner {
                 .address("Behind Croma, Karve Road, Kothrud, Pune 411038")
                 .genderCategory(GenderCategory.BOYS)
                 .rent(13500.0)
+                .rentByRoomType(Map.of(RoomType.SINGLE, 13500.0, RoomType.DOUBLE, 13500.0 * 0.85, RoomType.TRIPLE, 13500.0 * 0.70, RoomType.FOUR_SHARING, 13500.0 * 0.55))
                 .amenities(Arrays.asList("WiFi", "Food", "AC", "Parking", "Gym", "Laundry", "Geyser", "Housekeeping"))
                 .images(Arrays.asList(
                     "https://images.unsplash.com/photo-1617806118233-18e1de247200?auto=format&fit=crop&w=600&q=80",
@@ -297,6 +303,7 @@ public class DashboardDataSeeder implements CommandLineRunner {
                 .address("Aundh Road, Near Westend Mall, Aundh, Pune 411007")
                 .genderCategory(GenderCategory.BOYS)
                 .rent(6800.0)
+                .rentByRoomType(Map.of(RoomType.SINGLE, 6800.0, RoomType.DOUBLE, 6800.0 * 0.85, RoomType.TRIPLE, 6800.0 * 0.70, RoomType.FOUR_SHARING, 6800.0 * 0.55))
                 .amenities(Arrays.asList("WiFi", "Parking", "Laundry", "CCTV"))
                 .images(Collections.singletonList(
                     "https://images.unsplash.com/photo-1540518614846-7eded433c457?auto=format&fit=crop&w=600&q=80"
@@ -314,6 +321,7 @@ public class DashboardDataSeeder implements CommandLineRunner {
                 .address("Phase 2, Hinjewadi, Pune 411057")
                 .genderCategory(GenderCategory.BOYS)
                 .rent(8000.0)
+                .rentByRoomType(Map.of(RoomType.SINGLE, 8000.0, RoomType.DOUBLE, 8000.0 * 0.85, RoomType.TRIPLE, 8000.0 * 0.70, RoomType.FOUR_SHARING, 8000.0 * 0.55))
                 .amenities(Arrays.asList("WiFi", "AC"))
                 .images(Collections.singletonList(
                     "https://images.unsplash.com/photo-1493809842364-78817add7ffb?auto=format&fit=crop&w=600&q=80"
@@ -333,6 +341,7 @@ public class DashboardDataSeeder implements CommandLineRunner {
                 .address("Ideal Colony Road, Near MIT College, Kothrud, Pune 411038")
                 .genderCategory(GenderCategory.GIRLS)
                 .rent(5500.0)
+                .rentByRoomType(Map.of(RoomType.SINGLE, 5500.0, RoomType.DOUBLE, 5500.0 * 0.85, RoomType.TRIPLE, 5500.0 * 0.70, RoomType.FOUR_SHARING, 5500.0 * 0.55))
                 .amenities(Arrays.asList("WiFi", "Security", "CCTV", "Geyser", "Wardrobe"))
                 .images(Arrays.asList(
                     "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=600&q=80",
@@ -351,6 +360,7 @@ public class DashboardDataSeeder implements CommandLineRunner {
                 .address("Clover Park, Viman Nagar, Pune 411014")
                 .genderCategory(GenderCategory.GIRLS)
                 .rent(15000.0)
+                .rentByRoomType(Map.of(RoomType.SINGLE, 15000.0, RoomType.DOUBLE, 15000.0 * 0.85, RoomType.TRIPLE, 15000.0 * 0.70, RoomType.FOUR_SHARING, 15000.0 * 0.55))
                 .amenities(Arrays.asList("WiFi", "Food", "AC", "Gym", "Swimming Pool", "Laundry", "Housekeeping", "Parking"))
                 .images(Arrays.asList(
                     "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=600&q=80",
@@ -369,6 +379,7 @@ public class DashboardDataSeeder implements CommandLineRunner {
                 .address("Magarpatta Road, Hadapsar, Pune 411028")
                 .genderCategory(GenderCategory.GIRLS)
                 .rent(4200.0)
+                .rentByRoomType(Map.of(RoomType.SINGLE, 4200.0, RoomType.DOUBLE, 4200.0 * 0.85, RoomType.TRIPLE, 4200.0 * 0.70, RoomType.FOUR_SHARING, 4200.0 * 0.55))
                 .amenities(Arrays.asList("WiFi", "Power Backup"))
                 .images(Collections.singletonList(
                     "https://images.unsplash.com/photo-1598928636135-d146006ff4be?auto=format&fit=crop&w=600&q=80"
@@ -386,6 +397,7 @@ public class DashboardDataSeeder implements CommandLineRunner {
                 .address("DP Road, Near Aundh Hospital, Aundh, Pune 411007")
                 .genderCategory(GenderCategory.GIRLS)
                 .rent(7800.0)
+                .rentByRoomType(Map.of(RoomType.SINGLE, 7800.0, RoomType.DOUBLE, 7800.0 * 0.85, RoomType.TRIPLE, 7800.0 * 0.70, RoomType.FOUR_SHARING, 7800.0 * 0.55))
                 .amenities(Arrays.asList("WiFi", "Food", "Geyser", "Laundry", "CCTV"))
                 .images(Arrays.asList(
                     "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?auto=format&fit=crop&w=600&q=80",
@@ -404,6 +416,7 @@ public class DashboardDataSeeder implements CommandLineRunner {
                 .address("Sus Road, Baner, Pune 411021")
                 .genderCategory(GenderCategory.GIRLS)
                 .rent(11000.0)
+                .rentByRoomType(Map.of(RoomType.SINGLE, 11000.0, RoomType.DOUBLE, 11000.0 * 0.85, RoomType.TRIPLE, 11000.0 * 0.70, RoomType.FOUR_SHARING, 11000.0 * 0.55))
                 .amenities(Arrays.asList("WiFi", "AC", "Parking", "Study Table"))
                 .images(Collections.singletonList(
                     "https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde?auto=format&fit=crop&w=600&q=80"
@@ -423,6 +436,7 @@ public class DashboardDataSeeder implements CommandLineRunner {
                 .address("Phase 3, Near Wipro Gate, Hinjewadi, Pune 411057")
                 .genderCategory(GenderCategory.UNISEX)
                 .rent(12500.0)
+                .rentByRoomType(Map.of(RoomType.SINGLE, 12500.0, RoomType.DOUBLE, 12500.0 * 0.85, RoomType.TRIPLE, 12500.0 * 0.70, RoomType.FOUR_SHARING, 12500.0 * 0.55))
                 .amenities(Arrays.asList("WiFi", "Food", "AC", "Gym", "Parking", "Laundry", "Swimming Pool", "Power Backup", "Housekeeping", "CCTV"))
                 .images(Arrays.asList(
                     "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=600&q=80",
@@ -442,6 +456,7 @@ public class DashboardDataSeeder implements CommandLineRunner {
                 .address("5th Block, Koramangala, Bangalore 560095")
                 .genderCategory(GenderCategory.UNISEX)
                 .rent(10500.0)
+                .rentByRoomType(Map.of(RoomType.SINGLE, 10500.0, RoomType.DOUBLE, 10500.0 * 0.85, RoomType.TRIPLE, 10500.0 * 0.70, RoomType.FOUR_SHARING, 10500.0 * 0.55))
                 .amenities(Arrays.asList("WiFi", "AC", "Food", "Laundry", "CCTV", "Power Backup"))
                 .images(Arrays.asList(
                     "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?auto=format&fit=crop&w=600&q=80",
@@ -460,6 +475,7 @@ public class DashboardDataSeeder implements CommandLineRunner {
                 .address("Oshiwara, Near Andheri Station, Andheri West, Mumbai 400053")
                 .genderCategory(GenderCategory.UNISEX)
                 .rent(8800.0)
+                .rentByRoomType(Map.of(RoomType.SINGLE, 8800.0, RoomType.DOUBLE, 8800.0 * 0.85, RoomType.TRIPLE, 8800.0 * 0.70, RoomType.FOUR_SHARING, 8800.0 * 0.55))
                 .amenities(Arrays.asList("WiFi", "Parking", "Laundry", "Power Backup"))
                 .images(Collections.singletonList(
                     "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&w=600&q=80"
@@ -477,6 +493,7 @@ public class DashboardDataSeeder implements CommandLineRunner {
                 .address("Pali Hill, Bandra West, Mumbai 400050")
                 .genderCategory(GenderCategory.UNISEX)
                 .rent(22000.0)
+                .rentByRoomType(Map.of(RoomType.SINGLE, 22000.0, RoomType.DOUBLE, 22000.0 * 0.85, RoomType.TRIPLE, 22000.0 * 0.70, RoomType.FOUR_SHARING, 22000.0 * 0.55))
                 .amenities(Arrays.asList("WiFi", "AC", "Food", "Gym", "Parking", "Laundry", "TV", "Housekeeping", "Attached Bathroom"))
                 .images(Arrays.asList(
                     "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=600&q=80",
@@ -495,6 +512,7 @@ public class DashboardDataSeeder implements CommandLineRunner {
                 .address("100 Feet Road, Indiranagar, Bangalore 560038")
                 .genderCategory(GenderCategory.UNISEX)
                 .rent(11200.0)
+                .rentByRoomType(Map.of(RoomType.SINGLE, 11200.0, RoomType.DOUBLE, 11200.0 * 0.85, RoomType.TRIPLE, 11200.0 * 0.70, RoomType.FOUR_SHARING, 11200.0 * 0.55))
                 .amenities(Arrays.asList("WiFi", "Parking", "AC", "Laundry", "Power Backup", "CCTV", "Study Table"))
                 .images(Arrays.asList(
                     "https://images.unsplash.com/photo-1484101403633-562f891dc89a?auto=format&fit=crop&w=600&q=80",
@@ -513,6 +531,7 @@ public class DashboardDataSeeder implements CommandLineRunner {
                 .address("Karve Nagar, Kothrud, Pune 411052")
                 .genderCategory(GenderCategory.UNISEX)
                 .rent(3500.0)
+                .rentByRoomType(Map.of(RoomType.SINGLE, 3500.0, RoomType.DOUBLE, 3500.0 * 0.85, RoomType.TRIPLE, 3500.0 * 0.70, RoomType.FOUR_SHARING, 3500.0 * 0.55))
                 .amenities(Arrays.asList("WiFi"))
                 .images(Collections.singletonList(
                     "https://images.unsplash.com/photo-1540518614846-7eded433c457?auto=format&fit=crop&w=600&q=80"
@@ -530,6 +549,7 @@ public class DashboardDataSeeder implements CommandLineRunner {
                 .address("Near ITPL Main Gate, Whitefield, Bangalore 560066")
                 .genderCategory(GenderCategory.BOYS)
                 .rent(9800.0)
+                .rentByRoomType(Map.of(RoomType.SINGLE, 9800.0, RoomType.DOUBLE, 9800.0 * 0.85, RoomType.TRIPLE, 9800.0 * 0.70, RoomType.FOUR_SHARING, 9800.0 * 0.55))
                 .amenities(Arrays.asList("WiFi", "AC", "Food", "Parking", "Laundry", "Shuttle Service", "Power Backup"))
                 .images(Arrays.asList(
                     "https://images.unsplash.com/photo-1598928636135-d146006ff4be?auto=format&fit=crop&w=600&q=80",
@@ -548,6 +568,7 @@ public class DashboardDataSeeder implements CommandLineRunner {
                 .address("Hiranandani Gardens, Powai, Mumbai 400076")
                 .genderCategory(GenderCategory.GIRLS)
                 .rent(13000.0)
+                .rentByRoomType(Map.of(RoomType.SINGLE, 13000.0, RoomType.DOUBLE, 13000.0 * 0.85, RoomType.TRIPLE, 13000.0 * 0.70, RoomType.FOUR_SHARING, 13000.0 * 0.55))
                 .amenities(Arrays.asList("WiFi", "Food", "AC", "Security", "CCTV", "Laundry", "Geyser"))
                 .images(Arrays.asList(
                     "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=600&q=80",
@@ -566,6 +587,7 @@ public class DashboardDataSeeder implements CommandLineRunner {
                 .address("North Main Road, Kalyani Nagar, Pune 411006")
                 .genderCategory(GenderCategory.UNISEX)
                 .rent(20000.0)
+                .rentByRoomType(Map.of(RoomType.SINGLE, 20000.0, RoomType.DOUBLE, 20000.0 * 0.85, RoomType.TRIPLE, 20000.0 * 0.70, RoomType.FOUR_SHARING, 20000.0 * 0.55))
                 .amenities(Arrays.asList("WiFi", "AC", "Food", "Gym", "Parking", "Laundry", "TV", "Housekeeping", "Attached Bathroom", "Balcony", "Swimming Pool"))
                 .images(Arrays.asList(
                     "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=600&q=80",
