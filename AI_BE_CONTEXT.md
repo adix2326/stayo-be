@@ -176,7 +176,7 @@ wishlist/      WishlistController, WishlistService(Impl)
 ## 5. Authentication Flow
 
 1. `POST /api/auth/otp/send` — body `{ "mobileNumber": "+91XXXXXXXXXX" }`. Number must match E.164 (`^\+[1-9]\d{1,14}$`). OTP stored in `otp_requests` (via `OtpRepository`), delivered by Twilio, or static `123456` when `otp.use-static=true`.
-2. `POST /api/auth/otp/verify` — body `{ mobileNumber, otp }`. Verifies OTP (5-min expiry, max 3 attempts). If the user exists → sign-in; otherwise a new `User` is created with `role=USER`, `phoneVerified=true`, `profileCompleted=false`. Returns `AuthResponse` (`accessToken`, `userId`, `mobileNumber`, `name`, `email`, `role`; `refreshToken` field exists but is not populated).
+2. `POST /api/auth/otp/verify` — body `{ mobileNumber, otp, viaOwnerOnboarding }`. Verifies OTP (5-min expiry, max 3 attempts). If the user exists → sign-in (their `roles` are never touched here — see Roles below). Otherwise a new `User` is created with `phoneVerified=true`, `profileCompleted=false`, and an initial `roles` list of exactly one role: `[PG_OWNER]` if `viaOwnerOnboarding=true` (the frontend's "Become an Owner" entry point sends this), else `[USER]` (the default, standard Login flow). Returns `AuthResponse` (`accessToken`, `userId`, `mobileNumber`, `name`, `email`, `roles`, `dualRoleAvailable`; `refreshToken` field exists but is not populated).
 3. `PUT /api/auth/update-details` — completes the profile (name, email, gender, DOB, occupation, college, company, city, state, country, bio, profileImage). Once both name and email are non-blank, `profileCompleted` flips to `true`. Returns a **fresh token** that embeds name/email claims.
 4. `POST /api/auth/logout` — blacklists the presented JWT in the `BlacklistedToken` collection (stored with its expiry instant).
 
@@ -186,7 +186,11 @@ wishlist/      WishlistController, WishlistService(Impl)
 - **There is no JWT authentication filter.** `SecurityConfig` permits **all** requests (`anyRequest().permitAll()`). Authentication is enforced per-endpoint: every controller receives the raw `Authorization` header and calls `AuthUtil.extractUserIdFromToken(token)`, which validates the token and returns the userId (throwing `MissingAuthorizationException` / `InvalidTokenException` otherwise). New endpoints that need auth must follow this same pattern.
 
 ### Roles
-`Role` enum on the user: `USER`, `OWNER`, `ADMIN`. There is currently **no role-based authorization enforcement in the filter chain** (still `permitAll()`) — the one exception is `OwnerProfileService.verifyOwnerProfile`, which manually checks `caller.getRole() == Role.ADMIN` in the service layer (see §6 Owner endpoints). There is no admin-management API — `ADMIN` accounts must be assigned directly in the database. No full Admin Panel module exists yet.
+`User.roles` is a `List<Role>` — an account can hold more than one of `USER`, `PG_OWNER`, `ADMIN` at once (there is no separate singular "role" field; it was removed). Becoming an owner (`POST /api/owner/onboarding`, first submission) **appends** `PG_OWNER` to this list without removing any role already present (e.g. `USER`) — see `OwnerProfileServiceImpl.submitOnboarding`. `User.ensureRolesInitialized()` is a defensive-only guard (seeds `[USER]` if the list is ever empty); every real code path that creates a `User` sets `roles` explicitly.
+
+`AuthResponse.dualRoleAvailable` (`AuthService.canChooseRole`) is `true` whenever `roles.contains(PG_OWNER)` — **not** only when an account literally holds both `USER` and `PG_OWNER`. A `PG_OWNER`-only account (e.g. one that signed up straight through "Become an Owner" and never separately holds `USER`) still gets this flag, because nothing in the app gates ordinary browsing/booking behind the `USER` role specifically — a `PG_OWNER` account can always additionally act as a plain tenant. This flag drives the frontend's post-login role-picker screen (`/choose-role`).
+
+There is currently **no role-based authorization enforcement in the filter chain** (still `permitAll()`) — the one exception is `OwnerProfileService.verifyOwnerProfile`, which manually checks `caller.getRoles().contains(Role.ADMIN)` in the service layer (see §6 Owner endpoints). There is no admin-management API — `ADMIN` accounts must be assigned directly in the database. No full Admin Panel module exists yet.
 
 ---
 
@@ -249,7 +253,7 @@ All authenticated endpoints take the JWT in the `Authorization` header (Bearer f
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/api/owner/dashboard` | Aggregated `OwnerDashboardResponseDTO`: `totalProperties`, `activeProperties`, `occupiedRoomsEstimate` (count of `OWNER_ACCEPTED` bookings across owned PGs), `pendingRequestsCount` (`PENDING_OWNER` bookings), `monthlyRevenueEstimate` (sum of `monthlyRent` for `OWNER_ACCEPTED` bookings), `todaysViews` (`PGView` count for owned PGs today), `revenueTrend` (trailing 6 months, by booking `createdAt` month — a proxy, not a real ledger). Fetches properties + bookings in parallel via `CompletableFuture`, mirroring `DashboardServiceImpl`'s pattern. |
-| POST | `/api/owner/onboarding` | Submit (or resubmit after rejection) PG owner business + bank details. Flips the caller's `role` to `OWNER` and sets `verificationStatus=PENDING`. 409 if already `PENDING`/`VERIFIED`. |
+| POST | `/api/owner/onboarding` | Submit (or resubmit after rejection) PG owner business + bank details. Adds `PG_OWNER` to the caller's `roles` list (without removing any existing role) and sets `verificationStatus=PENDING`. 409 if already `PENDING`/`VERIFIED`. |
 | GET | `/api/owner/onboarding/status` | Get the caller's `OwnerProfile` + verification status. 404 if never submitted. |
 | POST | `/api/owner/onboarding/documents` | Multipart upload of a verification document (Aadhaar/PAN/electricity bill/rental agreement/property images); appends the URL to `documents`. Stored via Cloudinary, returns an absolute HTTPS URL, same as profile images. |
 | PATCH | `/api/owner/onboarding/{targetUserId}/verify` | Approve/reject a submission. Requires the caller to hold `Role.ADMIN` (403 `AdminAccessRequiredException` otherwise) — there is still no admin-management API or Admin Panel UI, so `ADMIN` accounts must be assigned directly in the database (see `docs/GUIDELINES/OWNER_PORTAL_ROADMAP.md` Phase 7). Body `{ status: VERIFIED\|REJECTED, rejectionReason }` — reason required when rejecting. |
@@ -317,7 +321,7 @@ New failure modes ⇒ create a custom exception + a handler here. Never return r
 
 | Collection | Entity | Key fields / indexes |
 |---|---|---|
-| `users` | `user/entity/User` | name, email, mobileNumber, gender, dateOfBirth, occupation, college, company, city/state/country, bio, profileImage, role, phoneVerified, profileCompleted, `wishlistPropertyIds: List<String>`, audit timestamps |
+| `users` | `user/entity/User` | name, email, mobileNumber, gender, dateOfBirth, occupation, college, company, city/state/country, bio, profileImage, `roles: List<Role>` (USER/PG_OWNER/ADMIN, any combination — no singular "role" field), phoneVerified, profileCompleted, `wishlistPropertyIds: List<String>`, audit timestamps |
 | `properties` | `property/entity/PG` | pgName, description, city*, locality*, address, genderCategory (`GenderCategory`: BOYS/GIRLS/UNISEX), rent (display price), `rentByRoomType: Map<RoomType, Double>` (per-sharing rent used at booking), `securityDeposit`, amenities[], images[], rating, reviewCount, isFeatured*, isActive*, ownerId*; compound index `(isFeatured, isActive)` (* = indexed) |
 | `bookings` | `booking/entity/Booking` | userId*, pgId*, denormalized pgName/pgLocality/pgCity/pgOwnerId, roomType (SINGLE/DOUBLE), moveInDate, minimumStay (THREE_MONTHS/SIX_MONTHS/TWELVE_MONTHS), occupantCount (1–4), primaryOccupant + extraOccupants (`OccupantInfo`), specialNote, `rejectionReason` (populated only on OWNER_REJECTED), financial snapshot (monthlyRent, securityDeposit, totalPayable), status*; compound indexes `(userId,status,createdAt)` and `(pgId,status)`; partial unique index `(userId,pgId)` where status not in [CANCELLED, OWNER_REJECTED] |
 | `owner_profiles` | `owner/entity/OwnerProfile` | userId* (unique), businessName, gstNumber, panNumber, bankAccountName, bankAccountNumber (masked as `maskedBankAccountNumber` in responses — never returned raw), bankIfsc, bankName, documents: List<String>, verificationStatus (PENDING/VERIFIED/REJECTED), rejectionReason, submittedAt, reviewedAt |
@@ -362,6 +366,7 @@ Booking deliberately **denormalizes** PG display fields and snapshots pricing at
 
 Tests live under `src/test/java/com/stayo/stayo/`:
 - `auth/controller/AuthControllerTest`
+- `auth/service/AuthServiceTest` — Mockito unit test (multi-role login flow: entry-point-based initial role on signup, roles never overwritten at login, `dualRoleAvailable` true whenever `PG_OWNER` is present including `PG_OWNER`-only accounts)
 - `booking/controller/BookingControllerTest` — Integration test (create, duplicate, cancel, get by ID, list)
 - `booking/service/impl/BookingServiceImplTest` — Mockito unit test (pricing math, duplicates, ownership, cancel/accept/reject state machine, notifications)
 - `dashboard/controller/DashboardControllerTest`, `dashboard/service/impl/DashboardServiceImplTest`
