@@ -153,4 +153,21 @@ public class BookingController {
 
         return ResponseEntity.ok(ApiResponse.success(response, "Booking rejected successfully"));
     }
+
+    /**
+     * PATCH /api/booking/owner/{bookingId}/confirm-payment
+     * Confirm payment received for an OWNER_ACCEPTED booking as the PG owner.
+     * Manual stopgap standing in for a real payment gateway.
+     */
+    @Operation(summary = "Confirm payment received for a booking as the PG owner")
+    @PatchMapping("/owner/{bookingId}/confirm-payment")
+    public ResponseEntity<ApiResponse<BookingResponseDTO>> confirmPayment(
+            @RequestHeader(value = "Authorization", required = false) String token,
+            @PathVariable String bookingId) {
+
+        String ownerId = authUtil.extractUserIdFromToken(token);
+        BookingResponseDTO response = bookingService.confirmPayment(ownerId, bookingId);
+
+        return ResponseEntity.ok(ApiResponse.success(response, "Payment confirmed successfully"));
+    }
 }

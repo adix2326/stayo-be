@@ -1,5 +1,6 @@
 package com.stayo.stayo.property.dto;
 
+import com.stayo.stayo.shared.enums.Amenity;
 import com.stayo.stayo.shared.enums.GenderCategory;
 
 import lombok.AllArgsConstructor;
@@ -20,12 +21,10 @@ public class PGResponse {
     private String locality;
     private String address;
     private GenderCategory genderCategory;
-    private Double rent;
-    private List<String> amenities;
+    private List<SharingTypeDTO> sharingType;
+    private List<Amenity> amenities;
     private List<String> images;
     private Double rating;
     private Integer reviewCount;
     private Boolean isWishlisted;
-    private java.util.Map<com.stayo.stayo.booking.enums.RoomType, Double> rentByRoomType;
-    private Double securityDeposit;
 }

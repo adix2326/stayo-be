@@ -32,7 +32,7 @@ public class UserResponseDto {
     private String country;
     private String bio;
     private String profileImage;
-    private String role;
+    private java.util.List<String> roles;
     private boolean phoneVerified;
     private boolean profileCompleted;
     private LocalDateTime createdAt;
@@ -55,7 +55,7 @@ public class UserResponseDto {
                 .country(user.getCountry())
                 .bio(user.getBio())
                 .profileImage(user.getProfileImage())
-                .role(user.getRole() != null ? user.getRole().toString() : null)
+                .roles(user.getRoles().stream().map(Enum::name).collect(java.util.stream.Collectors.toList()))
                 .phoneVerified(user.isPhoneVerified())
                 .profileCompleted(user.isProfileCompleted())
                 .build();

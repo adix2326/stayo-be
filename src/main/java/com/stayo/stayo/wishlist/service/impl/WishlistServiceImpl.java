@@ -3,6 +3,7 @@ package com.stayo.stayo.wishlist.service.impl;
 import com.stayo.stayo.property.dto.PGCardDTO;
 import com.stayo.stayo.property.entity.PG;
 import com.stayo.stayo.property.repository.PGRepository;
+import com.stayo.stayo.property.service.PGService;
 import com.stayo.stayo.shared.exception.UserNotFoundException;
 import com.stayo.stayo.user.entity.User;
 import com.stayo.stayo.user.repository.UserRepository;
@@ -12,7 +13,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -22,6 +25,7 @@ public class WishlistServiceImpl implements WishlistService {
 
     private final UserRepository userRepository;
     private final PGRepository pgRepository;
+    private final PGService pgService;
 
     @Override
     public void addToWishlist(String userId, String propertyId) {
@@ -72,16 +76,17 @@ public class WishlistServiceImpl implements WishlistService {
         }
 
         List<PG> properties = pgRepository.findAllById(wishlistIds);
+        Map<String, List<String>> imagesByPgId = pgService.getImageUrlsBatch(
+                properties.stream().map(PG::getId).collect(Collectors.toList()));
 
         return properties.stream()
-                .map(this::mapToPGCardDTO)
+                .map(p -> mapToPGCardDTO(p, imagesByPgId))
                 .collect(Collectors.toList());
     }
 
-    private PGCardDTO mapToPGCardDTO(PG property) {
-        String thumbnail = (property.getImages() != null && !property.getImages().isEmpty())
-                ? property.getImages().get(0)
-                : null;
+    private PGCardDTO mapToPGCardDTO(PG property, Map<String, List<String>> imagesByPgId) {
+        List<String> imageUrls = imagesByPgId.getOrDefault(property.getId(), Collections.emptyList());
+        String thumbnail = imageUrls.isEmpty() ? null : imageUrls.get(0);
 
         return PGCardDTO.builder()
                 .id(property.getId())
@@ -89,7 +94,7 @@ public class WishlistServiceImpl implements WishlistService {
                 .thumbnail(thumbnail)
                 .city(property.getCity())
                 .locality(property.getLocality())
-                .rent(property.getRent())
+                .rent(startingRent(property.getSharingType()))
                 .rating(property.getRating())
                 .reviewCount(property.getReviewCount())
                 .verified(true)
@@ -99,5 +104,18 @@ public class WishlistServiceImpl implements WishlistService {
                 .availableBeds(2)
                 .ownerVerified(true)
                 .build();
+    }
+
+    // Display "starting rent" is derived from the cheapest sharing type on the
+    // fly rather than stored on PG — see property.entity.PG / SharingType.
+    private Double startingRent(List<com.stayo.stayo.property.entity.SharingType> sharingTypes) {
+        if (sharingTypes == null || sharingTypes.isEmpty()) {
+            return null;
+        }
+        return sharingTypes.stream()
+                .map(com.stayo.stayo.property.entity.SharingType::getRent)
+                .filter(java.util.Objects::nonNull)
+                .min(java.util.Comparator.naturalOrder())
+                .orElse(null);
     }
 }

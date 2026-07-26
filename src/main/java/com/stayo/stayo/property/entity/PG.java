@@ -1,6 +1,6 @@
 package com.stayo.stayo.property.entity;
 
-import com.stayo.stayo.booking.enums.RoomType;
+import com.stayo.stayo.shared.enums.Amenity;
 import com.stayo.stayo.shared.enums.GenderCategory;
 
 import lombok.AllArgsConstructor;
@@ -14,7 +14,6 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 
 @CompoundIndex(name = "featured_active_index", def = "{'isFeatured': 1, 'isActive': 1}")
 @Document(collection = "properties")
@@ -37,15 +36,15 @@ public class PG {
 
     private GenderCategory genderCategory;
 
-    private Double rent; //display/base price per month (used for search, sort, cards)
+    // Replaces the old flat rent/rentByRoomType/securityDeposit fields — one
+    // entry per sharing type offered, with real room counts and occupancy.
+    // Display/sort "rent" is derived as the minimum across this list — see
+    // PGServiceImpl — rather than stored redundantly on the entity.
+    private List<SharingType> sharingType;
 
-    private Map<RoomType, Double> rentByRoomType; //owner-set monthly rent per sharing type, used at booking time
+    private List<Amenity> amenities;
 
-    private Double securityDeposit; //refundable deposit for this PG; may vary independently of rent
-
-    private List<String> amenities;
-
-    private List<String> images; //image urls
+    // images now live in their own PGImages collection (max 10 per PG), keyed by pgId — see PGImagesRepository.
 
     private Double rating;
 

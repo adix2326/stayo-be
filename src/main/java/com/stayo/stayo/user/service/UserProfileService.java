@@ -2,6 +2,8 @@ package com.stayo.stayo.user.service;
 
 import com.stayo.stayo.shared.enums.Gender;
 import com.stayo.stayo.shared.exception.UserNotFoundException;
+import com.stayo.stayo.storage.dto.StoredFile;
+import com.stayo.stayo.storage.service.FileStorageService;
 import com.stayo.stayo.user.dto.UpdateProfileRequest;
 import com.stayo.stayo.user.dto.UserProfileResponse;
 import com.stayo.stayo.user.entity.User;
@@ -14,13 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -28,7 +24,7 @@ import java.util.UUID;
 public class UserProfileService {
 
     private final UserRepository userRepository;
-    private static final String UPLOADS_DIR = "uploads";
+    private final FileStorageService fileStorageService;
 
     public UserProfileResponse getUserProfile(String userId) {
         User user = findUserById(userId);
@@ -66,50 +62,28 @@ public class UserProfileService {
             throw new IllegalArgumentException("Cannot upload empty file");
         }
 
-        try {
-            // Ensure uploads directory exists
-            Path uploadPath = Paths.get(UPLOADS_DIR);
-            if (!Files.exists(uploadPath)) {
-                Files.createDirectories(uploadPath);
-            }
-
-            // Generate unique filename
-            String originalFilename = file.getOriginalFilename();
-            String extension = "";
-            if (originalFilename != null && originalFilename.contains(".")) {
-                extension = originalFilename.substring(originalFilename.lastIndexOf("."));
-            }
-            String filename = UUID.randomUUID().toString() + extension;
-            Path filePath = uploadPath.resolve(filename);
-
-            // Copy file to target path
-            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-
-            // Delete old profile image if it exists locally
-            deleteOldLocalImage(user.getProfileImage());
-
-            // Update user image URL
-            String relativeUrl = "/uploads/" + filename;
-            user.setProfileImage(relativeUrl);
-            user.setProfileCompleted(calculateProfileCompleted(user));
-            user.setUpdatedAt(LocalDateTime.now());
-
-            userRepository.save(user);
-            log.info("Profile image uploaded successfully for user: {}", userId);
-            return relativeUrl;
-
-        } catch (IOException e) {
-            log.error("Failed to store uploaded profile image for user: {}", userId, e);
-            throw new RuntimeException("Could not store profile image: " + e.getMessage(), e);
+        if (user.getProfileImagePublicId() != null) {
+            fileStorageService.delete(user.getProfileImagePublicId());
         }
+
+        StoredFile stored = fileStorageService.upload(file, "profile-images");
+        user.setProfileImage(stored.url());
+        user.setProfileImagePublicId(stored.publicId());
+        user.setProfileCompleted(calculateProfileCompleted(user));
+        user.setUpdatedAt(LocalDateTime.now());
+
+        userRepository.save(user);
+        log.info("Profile image uploaded successfully for user: {}", userId);
+        return stored.url();
     }
 
     public void deleteProfileImage(String userId) {
         User user = findUserById(userId);
 
         if (user.getProfileImage() != null) {
-            deleteOldLocalImage(user.getProfileImage());
+            fileStorageService.delete(user.getProfileImagePublicId());
             user.setProfileImage(null);
+            user.setProfileImagePublicId(null);
             user.setProfileCompleted(calculateProfileCompleted(user));
             user.setUpdatedAt(LocalDateTime.now());
             userRepository.save(user);
@@ -147,18 +121,6 @@ public class UserProfileService {
         if (user.getProfileImage() != null && !user.getProfileImage().trim().isEmpty()) filledFields++;
 
         return (int) Math.round((filledFields / (double) totalFields) * 100);
-    }
-
-    private void deleteOldLocalImage(String relativePath) {
-        if (relativePath != null && relativePath.startsWith("/uploads/")) {
-            String filename = relativePath.substring("/uploads/".length());
-            try {
-                Path filePath = Paths.get(UPLOADS_DIR).resolve(filename);
-                Files.deleteIfExists(filePath);
-            } catch (IOException e) {
-                log.warn("Failed to delete local profile image file: {}", relativePath, e);
-            }
-        }
     }
 
     private UserProfileResponse mapToResponse(User user) {

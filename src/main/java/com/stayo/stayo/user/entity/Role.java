@@ -2,5 +2,6 @@ package com.stayo.stayo.user.entity;
 
 public enum Role {
     USER,
-    OWNER
+    PG_OWNER,
+    ADMIN
 }

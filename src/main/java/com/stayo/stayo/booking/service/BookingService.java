@@ -49,4 +49,12 @@ public interface BookingService {
      */
     BookingResponseDTO respondToBooking(String ownerUserId,
                                         String bookingId, BookingStatus decision, String reason);
+
+    /**
+     * Owner confirms that rent/deposit payment has been received for an
+     * OWNER_ACCEPTED booking, finalizing it. Sets status=CONFIRMED and
+     * paymentStatus=PAID. This is a manual stopgap standing in for a real
+     * payment gateway — no actual payment processing occurs here.
+     */
+    BookingResponseDTO confirmPayment(String ownerUserId, String bookingId);
 }

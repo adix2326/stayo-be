@@ -27,6 +27,7 @@ Everything models **PGs only** — no hotels, apartments, hostels, or generic pr
 | Security | Spring Security (permissive filter chain) + custom JWT handling |
 | JWT | `io.jsonwebtoken` jjwt 0.12.3 |
 | SMS / OTP delivery | Twilio SDK 9.2.0 (with a static-OTP dev mode) |
+| File storage | Cloudinary (`cloudinary-http44` SDK) — profile images, owner KYC documents, property images all stored in the cloud, not on local disk |
 | API docs | springdoc-openapi 2.8.5 — Swagger UI at `/swagger-ui.html`, spec at `/v3/api-docs` |
 | Boilerplate | Lombok (`@Data`, `@Builder`, `@RequiredArgsConstructor`, `@Slf4j`) |
 | Build | Maven (wrapper: `mvnw` / `mvnw.cmd`) |
@@ -65,6 +66,8 @@ All secrets resolve from environment variables with development fallbacks:
 | `otp.max-attempts` | — | 3 |
 | `otp.static-code` / `otp.use-static` | `OTP_USE_STATIC` | Dev mode: OTP is always `123456` when `true` (default true) |
 | `health.ping.url` / `health.ping.cron` | — | Self-ping config used by `HealthCheckPingService` |
+| `cloudinary.cloud-name` / `api-key` / `api-secret` | `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` | Cloud file storage; dev fallback points at Cloudinary's public `demo` cloud (uploads will fail without real credentials, same as Twilio) |
+| `spring.servlet.multipart.max-file-size` / `max-request-size` | — | `8MB` / `8MB` — stays under Cloudinary's free-tier ~10MB/file cap |
 
 ---
 
@@ -96,7 +99,7 @@ booking/       Booking request lifecycle
 
 common/        HealthController (GET /health), HealthCheckPingService (keep-alive self-ping)
 
-config/        SecurityConfig (CORS + filter chain), WebConfig (static /uploads),
+config/        SecurityConfig (CORS + filter chain), CloudinaryConfig (Cloudinary client bean),
                OpenApiConfig, scheduler/KeepAliveScheduler,
                seeder/CityDataSeeder, seeder/DashboardDataSeeder
 
@@ -106,11 +109,44 @@ content/       Dashboard content: Banner, DashboardCategory, PopularSearch, Quic
 dashboard/     Aggregation layer: DashboardController, DashboardService(Impl),
                DashboardAssembler, DashboardResponseDTO
 
+document/      Generic verification-document storage (separate from the owner-onboarding
+               document upload, which lives on OwnerProfile.documents directly)
+  dto/         DocumentResponseDTO
+  entity/      Document
+  enums/       DocType (AADHAR, PAN, OTHER, ...)
+  repository/  DocumentRepository
+  service/     DocumentService + impl/DocumentServiceImpl — stores files via the shared
+               `storage` module (Cloudinary)
+
 notification/  NotificationService, SmsService (Twilio wrapper)
+
+owner/         PG owner business-profile onboarding/verification + dashboard aggregation
+               (property CRUD itself lives in the `property` module — see docs/GUIDELINES/OWNER_PORTAL_ROADMAP.md)
+  controller/  OwnerController
+  dto/         OwnerOnboardingRequestDTO, OwnerProfileResponseDTO, OwnerVerificationRequestDTO,
+               OwnerDashboardResponseDTO, MonthlyRevenuePointDTO
+  entity/      OwnerProfile
+  enums/       VerificationStatus (PENDING/VERIFIED/REJECTED)
+  exception/   OwnerProfileNotFoundException, OwnerAlreadyOnboardedException, InvalidVerificationRequestException,
+               OwnerNotVerifiedException
+  repository/  OwnerProfileRepository
+  service/     OwnerProfileService + impl/OwnerProfileServiceImpl,
+               OwnerDashboardService + impl/OwnerDashboardServiceImpl
 
 property/      PG domain: PGController, PG entity, PGView (view tracking),
                PGService(Impl), NearbyPGService, RecommendationService,
-               PGCardDTO (list card), PGResponse (full details)
+               PGCardDTO (list card), PGResponse (full details), PropertyRequestDTO (owner create/update),
+               exception/PropertyAccessDeniedException (403, ownership mismatch on update/deactivate/image upload)
+
+review/        PG reviews — ⚠️ backend-complete but currently unreachable, see §13
+  controller/  ReviewController
+  dto/         ReviewRequestDTO, ReviewResponseDTO
+  entity/      PGReview
+  exception/   DuplicateReviewException (one review per user/PG/booking), ReviewNotEligibleException
+  repository/  PGReviewRepository
+  service/     ReviewService + impl/ReviewServiceImpl — requires the caller's booking to be
+               `BookingStatus.CONFIRMED` + `PaymentStatus.PAID` (see `booking/enums/PaymentStatus`);
+               on success calls `PGService.recordReview` to update the PG's rating/reviewCount
 
 search/        City data + search DTOs: City entity, CityService(Impl),
                SearchRequest, SearchDefaultDTO, CityResponse
@@ -119,6 +155,11 @@ search/        City data + search DTOs: City entity, CityService(Impl),
 shared/        ApiResponse<T>, ApiError, PageResponse<T>,
                enums (Gender, GenderCategory, SearchType),
                GlobalExceptionHandler + all custom exceptions
+
+storage/       Shared cloud file-storage abstraction — consumed by user/document/property
+               modules for all uploads (profile images, KYC documents, property images)
+  dto/         StoredFile (url + Cloudinary public_id)
+  service/     FileStorageService + impl/CloudinaryFileStorageService
 
 user/          User entity, Role, OtpRequest entity,
                UserController (/api/users/me), UserProfileController,
@@ -145,7 +186,7 @@ wishlist/      WishlistController, WishlistService(Impl)
 - **There is no JWT authentication filter.** `SecurityConfig` permits **all** requests (`anyRequest().permitAll()`). Authentication is enforced per-endpoint: every controller receives the raw `Authorization` header and calls `AuthUtil.extractUserIdFromToken(token)`, which validates the token and returns the userId (throwing `MissingAuthorizationException` / `InvalidTokenException` otherwise). New endpoints that need auth must follow this same pattern.
 
 ### Roles
-`Role` enum on the user: `USER`, `OWNER`, `ADMIN`. There is currently **no role-based authorization enforcement** in the filter chain.
+`Role` enum on the user: `USER`, `OWNER`, `ADMIN`. There is currently **no role-based authorization enforcement in the filter chain** (still `permitAll()`) — the one exception is `OwnerProfileService.verifyOwnerProfile`, which manually checks `caller.getRole() == Role.ADMIN` in the service layer (see §6 Owner endpoints). There is no admin-management API — `ADMIN` accounts must be assigned directly in the database. No full Admin Panel module exists yet.
 
 ---
 
@@ -167,7 +208,7 @@ All authenticated endpoints take the JWT in the `Authorization` header (Bearer f
 | GET | `/api/users/me` | Current user (`UserResponseDto`) — returns DTO directly, no `ApiResponse` wrapper |
 | GET | `/api/user/profile` | Full profile (`UserProfileResponse`) — unwrapped |
 | PUT | `/api/user/profile` | Update profile fields — unwrapped |
-| POST | `/api/user/profile/image` | Multipart upload (`file`); saved to local `uploads/` dir, served at `/uploads/**` via `WebConfig` |
+| POST | `/api/user/profile/image` | Multipart upload (`file`); stored via Cloudinary, returns an absolute HTTPS URL |
 | DELETE | `/api/user/profile/image` | Remove profile image (204) |
 
 ### Dashboard — `/api/user/dashboard`
@@ -180,6 +221,11 @@ All authenticated endpoints take the JWT in the `Authorization` header (Bearer f
 |---|---|---|
 | GET | `/api/properties/search` | Search + filter + paginate PGs. Query params bind to `SearchRequest`: `searchString`, `city`, `locality`, `gender` (GenderCategory), `minPrice`, `maxPrice`, `amenities`, `sortBy` (`price_asc` \| `price_desc` \| `rating_desc`), `pageNumber` (default 0), `size` (default 10). Returns `PageResponse<PGCardDTO>`. |
 | GET | `/api/properties/{id}` | Full details (`PGResponse`); also records a view (`PGView`) |
+| GET | `/api/properties/owner/mine` | List PGs owned by the caller (`List<PGResponse>`) |
+| POST | `/api/properties` | Create a PG listing. Requires an **approved** `OwnerProfile` (403 `OwnerNotVerifiedException` otherwise) — see the `owner` module. `ownerId` is set to the caller. |
+| PUT | `/api/properties/{id}` | Update a PG. 403 `PropertyAccessDeniedException` if the caller isn't `pg.ownerId`. |
+| PATCH | `/api/properties/{id}/deactivate` | Soft-delete (`isActive=false`) — no hard delete, since bookings reference PGs. Ownership-checked. |
+| POST | `/api/properties/{id}/images` | Multipart image upload; appends to `images`. Ownership-checked. Stored via Cloudinary, returns an absolute HTTPS URL, same as profile images. |
 
 ### Wishlist — `/api/wishlist`
 | Method | Path | Purpose |
@@ -198,6 +244,21 @@ All authenticated endpoints take the JWT in the `Authorization` header (Bearer f
 | GET | `/api/booking/owner?status=` | List booking requests for PGs owned by authenticated owner |
 | PATCH | `/api/booking/owner/{bookingId}/accept` | Accept a pending booking request as the PG owner |
 | PATCH | `/api/booking/owner/{bookingId}/reject` | Reject a booking (optional body `{ "reason": "..." }`) |
+
+### Owner — `/api/owner`
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/api/owner/dashboard` | Aggregated `OwnerDashboardResponseDTO`: `totalProperties`, `activeProperties`, `occupiedRoomsEstimate` (count of `OWNER_ACCEPTED` bookings across owned PGs), `pendingRequestsCount` (`PENDING_OWNER` bookings), `monthlyRevenueEstimate` (sum of `monthlyRent` for `OWNER_ACCEPTED` bookings), `todaysViews` (`PGView` count for owned PGs today), `revenueTrend` (trailing 6 months, by booking `createdAt` month — a proxy, not a real ledger). Fetches properties + bookings in parallel via `CompletableFuture`, mirroring `DashboardServiceImpl`'s pattern. |
+| POST | `/api/owner/onboarding` | Submit (or resubmit after rejection) PG owner business + bank details. Flips the caller's `role` to `OWNER` and sets `verificationStatus=PENDING`. 409 if already `PENDING`/`VERIFIED`. |
+| GET | `/api/owner/onboarding/status` | Get the caller's `OwnerProfile` + verification status. 404 if never submitted. |
+| POST | `/api/owner/onboarding/documents` | Multipart upload of a verification document (Aadhaar/PAN/electricity bill/rental agreement/property images); appends the URL to `documents`. Stored via Cloudinary, returns an absolute HTTPS URL, same as profile images. |
+| PATCH | `/api/owner/onboarding/{targetUserId}/verify` | Approve/reject a submission. Requires the caller to hold `Role.ADMIN` (403 `AdminAccessRequiredException` otherwise) — there is still no admin-management API or Admin Panel UI, so `ADMIN` accounts must be assigned directly in the database (see `docs/GUIDELINES/OWNER_PORTAL_ROADMAP.md` Phase 7). Body `{ status: VERIFIED\|REJECTED, rejectionReason }` — reason required when rejecting. |
+
+### Reviews — `/api/reviews`, `/api/properties/{pgId}/reviews`
+| Method | Path | Purpose |
+|---|---|---|
+| POST | `/api/reviews` | Submit a review (`pgId`, `bookingId`, `rating`, `review`). ⚠️ Requires the booking to already be `BookingStatus.CONFIRMED` + `PaymentStatus.PAID` — **no code path in this codebase currently produces that state** (see §13). 409 `DuplicateReviewException` if already reviewed; `ReviewNotEligibleException` if the booking/PG mismatch or isn't confirmed+paid. |
+| GET | `/api/properties/{pgId}/reviews` | List reviews for a PG (public, no auth) |
 
 ### Infra
 | Method | Path | Purpose |
@@ -240,6 +301,12 @@ Custom exceptions map to `ApiError { status, error, message, path }`:
 | `DuplicateBookingException` | 409 |
 | `InvalidBookingRequestException` | 400 (occupant count mismatch, room type unavailable, invalid decision) |
 | `InvalidBookingStateException` | 409 (e.g., cancel non-PENDING booking, respond to non-PENDING booking) |
+| `OwnerProfileNotFoundException` | 404 (no onboarding submission exists yet) |
+| `OwnerAlreadyOnboardedException` | 409 (resubmitting while `PENDING`/`VERIFIED`) |
+| `InvalidVerificationRequestException` | 400 (rejecting without a `rejectionReason`) |
+| `OwnerNotVerifiedException` | 403 (creating a property without an approved `OwnerProfile`) |
+| `PropertyAccessDeniedException` | 403 (update/deactivate/image-upload on a PG the caller doesn't own) |
+| `AdminAccessRequiredException` | 403 (calling `PATCH /api/owner/onboarding/{id}/verify` without `Role.ADMIN`) |
 | Bean-validation failures (`MethodArgumentNotValidException`, `ConstraintViolationException`) | 400 with collected field messages |
 
 New failure modes ⇒ create a custom exception + a handler here. Never return raw stack traces.
@@ -253,6 +320,9 @@ New failure modes ⇒ create a custom exception + a handler here. Never return r
 | `users` | `user/entity/User` | name, email, mobileNumber, gender, dateOfBirth, occupation, college, company, city/state/country, bio, profileImage, role, phoneVerified, profileCompleted, `wishlistPropertyIds: List<String>`, audit timestamps |
 | `properties` | `property/entity/PG` | pgName, description, city*, locality*, address, genderCategory (`GenderCategory`: BOYS/GIRLS/UNISEX), rent (display price), `rentByRoomType: Map<RoomType, Double>` (per-sharing rent used at booking), `securityDeposit`, amenities[], images[], rating, reviewCount, isFeatured*, isActive*, ownerId*; compound index `(isFeatured, isActive)` (* = indexed) |
 | `bookings` | `booking/entity/Booking` | userId*, pgId*, denormalized pgName/pgLocality/pgCity/pgOwnerId, roomType (SINGLE/DOUBLE), moveInDate, minimumStay (THREE_MONTHS/SIX_MONTHS/TWELVE_MONTHS), occupantCount (1–4), primaryOccupant + extraOccupants (`OccupantInfo`), specialNote, `rejectionReason` (populated only on OWNER_REJECTED), financial snapshot (monthlyRent, securityDeposit, totalPayable), status*; compound indexes `(userId,status,createdAt)` and `(pgId,status)`; partial unique index `(userId,pgId)` where status not in [CANCELLED, OWNER_REJECTED] |
+| `owner_profiles` | `owner/entity/OwnerProfile` | userId* (unique), businessName, gstNumber, panNumber, bankAccountName, bankAccountNumber (masked as `maskedBankAccountNumber` in responses — never returned raw), bankIfsc, bankName, documents: List<String>, verificationStatus (PENDING/VERIFIED/REJECTED), rejectionReason, submittedAt, reviewedAt |
+| pg reviews | `review/entity/PGReview` | pgId, userId, bookingId, rating, review, createdAt, updatedAt; unique per (userId, pgId, bookingId). ⚠️ Unreachable in practice — see §7 Reviews and §13 |
+| documents | `document/entity/Document` | userId, docType (`DocType`), file URL; generic verification-document store, separate from `OwnerProfile.documents` |
 | `blacklisted_tokens` | `auth/entity/BlacklistedToken` | token, expiryDate |
 | otp requests | `user/entity/OtpRequest` | mobileNumber, otp, expiry, attempt count |
 | pg views | `property/entity/PGView` | user→PG view tracking (recently viewed / recommendations) |
@@ -260,6 +330,8 @@ New failure modes ⇒ create a custom exception + a handler here. Never return r
 | banners / categories / popular searches / quick filters | `content/entity/*` | dashboard content, seeded by `DashboardDataSeeder` |
 
 `BookingStatus` lifecycle: `PENDING_OWNER → OWNER_ACCEPTED | OWNER_REJECTED`, user-side `CANCELLED` (only from PENDING_OWNER), `CONFIRMED` reserved for post-payment. Owner accept/reject is implemented via `PATCH /api/booking/owner/{id}/accept` and `PATCH /api/booking/owner/{id}/reject`.
+
+`PaymentStatus` (`booking/enums/PaymentStatus`): `PENDING`, `PAID`, `FAILED`, `REFUNDED`. ⚠️ **No payment gateway exists and no service code ever sets a booking to `CONFIRMED` or `PAID`** — `BookingServiceImpl` only ever transitions status to `CANCELLED` (cancel) or `OWNER_ACCEPTED`/`OWNER_REJECTED` (owner response). The `review` module's eligibility check (`ReviewServiceImpl`) depends on `CONFIRMED`+`PAID`, so **reviews cannot be exercised end-to-end until either a payment gateway lands or a manual/admin "confirm payment" transition is added** — see `docs/GUIDELINES/ROADMAP.md` for the planned unblock.
 
 Booking deliberately **denormalizes** PG display fields and snapshots pricing at creation time — keep this pattern when extending it.
 
@@ -293,10 +365,17 @@ Tests live under `src/test/java/com/stayo/stayo/`:
 - `booking/controller/BookingControllerTest` — Integration test (create, duplicate, cancel, get by ID, list)
 - `booking/service/impl/BookingServiceImplTest` — Mockito unit test (pricing math, duplicates, ownership, cancel/accept/reject state machine, notifications)
 - `dashboard/controller/DashboardControllerTest`, `dashboard/service/impl/DashboardServiceImplTest`
-- `property/controller/PGControllerTest`
+- `property/controller/PGControllerTest` — includes owner property CRUD (create/update/deactivate/list-mine, ownership & verification checks)
+- `property/service/impl/PGServiceImplTest` — Mockito unit test for the owner CRUD methods
 - `common/service/HealthCheckPingServiceTest`
+- `owner/controller/OwnerControllerTest` — Integration test (submit onboarding, duplicate/rejected resubmission, status, verify incl. non-admin rejection, dashboard aggregation)
+- `owner/service/impl/OwnerProfileServiceImplTest` — Mockito unit test (role flip, resubmission after rejection, masking, verify validation incl. `AdminAccessRequiredException`)
+- `owner/service/impl/OwnerDashboardServiceImplTest` — Mockito unit test (stat aggregation, revenue trend, zeroed-empty case)
+- `user/service/UserProfileServiceTest` — Mockito unit test (profile image upload/re-upload/delete via mocked `FileStorageService`)
+- `document/service/impl/DocumentServiceImplTest` — Mockito unit test (upload via mocked `FileStorageService`, empty-file guard, list-for-user)
+- `property/service/impl/PGServiceImplTest` — also covers `uploadPropertyImage` (cover-image/sort-order, `MAX_IMAGES_PER_PG` cap, ownership check, via mocked `FileStorageService`)
 
-Pattern: `@SpringBootTest` integration tests for controllers (direct controller invocation, not MockMvc), Mockito unit tests for services. New features should ship with matching tests.
+Pattern: `@SpringBootTest` integration tests for controllers (direct controller invocation, not MockMvc), Mockito unit tests for services. New features should ship with matching tests. `CloudinaryFileStorageService` itself is intentionally not unit-tested (thin SDK wrapper — verify manually against a real Cloudinary account instead); all callers mock the `FileStorageService` interface.
 
 ---
 
@@ -306,7 +385,7 @@ Pattern: `@SpringBootTest` integration tests for controllers (direct controller 
 2. **Token blacklist is not consulted on requests** — logout blacklists the token, but `AuthUtil`/`JwtProvider` validation paths must be checked before assuming blacklisted tokens are rejected everywhere.
 3. **`refreshToken` in `AuthResponse` is never populated** — refresh flow is future work.
 4. Wishlist remove uses **POST** `/api/wishlist/remove/{id}`, not DELETE — the frontend depends on this; changing it is a breaking API change.
-5. Profile image upload stores files on **local disk** (`uploads/`) — ephemeral on Render; a cloud storage migration is future work.
+5. File uploads (profile images, KYC documents, property images) now go through Cloudinary via the `storage` module — **any record whose stored URL still starts with `/uploads/` predates this migration and is a permanently dead link** (the local files were on Render's ephemeral disk and are gone). No backfill/re-upload path exists yet; sizing and fixing this is a deliberate follow-up, not done here.
 6. Some endpoints bypass the `ApiResponse` envelope (see §7) — frontend already parses both shapes.
 7. Dev MongoDB URI and JWT secret fallbacks are committed in `application.properties` — production must override via env vars.
 
@@ -314,7 +393,11 @@ Pattern: `@SpringBootTest` integration tests for controllers (direct controller 
 
 ## 13. Future / Planned (not implemented — do not build unless asked)
 
-Owner portal APIs (full dashboard), admin module, reviews, payments/`CONFIRMED` booking flow, refresh tokens, Google/Apple login, Redis caching, ElasticSearch-backed search, Firebase push notifications, role-based authorization.
+Owner business-profile onboarding/verification (including frontend wiring), owner property CRUD, owner dashboard aggregation (`owner/` + `property` modules), and the `ADMIN` role/authorization gate on owner verification are now implemented — see §4/§6/§8 above.
+
+**Reviews are a special case: the `review` module (§4/§7/§8) is fully built — controller, service, repository, entity, validation, duplicate/eligibility exceptions — but is currently unreachable.** `ReviewServiceImpl.submitReview` requires a booking with `status=CONFIRMED` and `paymentStatus=PAID`; no code anywhere (searched the full `booking` service/controller layer) ever sets either value — `BookingServiceImpl` only ever transitions to `CANCELLED`, `OWNER_ACCEPTED`, or `OWNER_REJECTED`. Until a payment gateway lands (or a manual/admin "confirm payment" transition is added as a stopgap), the review feature cannot be exercised end-to-end even though it's code-complete.
+
+Still not implemented: a full Admin Panel module/UI (today `ADMIN` accounts must be created by hand in the database — there's no signup/promotion flow for them), a real payment gateway and the `CONFIRMED`/`PAID` transition described above (revenue/occupancy figures on the owner dashboard are estimates derived from bookings, not a real ledger, until this lands), refresh tokens, Google/Apple login, Redis caching, ElasticSearch-backed search, Firebase push notifications, and broader role-based authorization (today only one endpoint checks role; the filter chain is still `permitAll()`). Full execution plan: `docs/GUIDELINES/OWNER_PORTAL_ROADMAP.md` and `docs/GUIDELINES/ROADMAP.md`.
 
 ---
 
