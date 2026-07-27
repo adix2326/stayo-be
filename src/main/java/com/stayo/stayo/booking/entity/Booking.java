@@ -2,6 +2,7 @@ package com.stayo.stayo.booking.entity;
 
 import com.stayo.stayo.booking.enums.BookingStatus;
 import com.stayo.stayo.booking.enums.MinimumStay;
+import com.stayo.stayo.booking.enums.PaymentStatus;
 import com.stayo.stayo.booking.enums.RoomType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -70,6 +71,12 @@ public class Booking {
 
     @Indexed
     private BookingStatus status;
+
+    // Groundwork for the future payments module — nothing sets these yet
+    // (no payment gateway is wired up), but a real ledger will need them.
+    @Builder.Default
+    private PaymentStatus paymentStatus = PaymentStatus.PENDING;
+    private String transactionId;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

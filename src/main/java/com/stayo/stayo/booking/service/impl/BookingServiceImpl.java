@@ -6,6 +6,7 @@ import com.stayo.stayo.booking.entity.Booking;
 import com.stayo.stayo.booking.entity.OccupantInfo;
 import com.stayo.stayo.booking.enums.BookingStatus;
 import com.stayo.stayo.booking.enums.MinimumStay;
+import com.stayo.stayo.booking.enums.PaymentStatus;
 import com.stayo.stayo.booking.exception.BookingNotFoundException;
 import com.stayo.stayo.booking.exception.DuplicateBookingException;
 import com.stayo.stayo.booking.exception.InvalidBookingRequestException;
@@ -15,6 +16,7 @@ import com.stayo.stayo.booking.repository.BookingRepository;
 import com.stayo.stayo.booking.service.BookingService;
 import com.stayo.stayo.notification.service.NotificationService;
 import com.stayo.stayo.property.entity.PG;
+import com.stayo.stayo.property.entity.SharingType;
 import com.stayo.stayo.property.repository.PGRepository;
 import com.stayo.stayo.shared.exception.PropertyNotFoundException;
 import com.stayo.stayo.user.entity.User;
@@ -70,13 +72,17 @@ public class BookingServiceImpl implements BookingService {
                     "An active booking request already exists for PG: " + pg.getPgName());
         }
 
-        // 4. Compute financials from PG data — rent is owner-set per sharing type, not derived
-        Double monthlyRent = pg.getRentByRoomType() != null ? pg.getRentByRoomType().get(request.getRoomType()) : null;
-        if (monthlyRent == null) {
+        // 4. Compute financials from PG data — rent is owner-set per sharing type, not derived.
+        // PG.sharingType is typed with property.enums.RoomSharingType (3 values, no
+        // FOUR_SHARING); matched against the booking's RoomType by name — a FOUR_SHARING
+        // request will simply never match, which is correct since no PG can offer it.
+        SharingType matchedSharing = findSharingType(pg, request.getRoomType());
+        if (matchedSharing == null || matchedSharing.getRent() == null) {
             throw new InvalidBookingRequestException(
                     "Room type " + request.getRoomType() + " is not available for PG: " + pg.getPgName());
         }
-        double securityDeposit = pg.getSecurityDeposit() != null ? pg.getSecurityDeposit() : monthlyRent;
+        double monthlyRent = matchedSharing.getRent();
+        double securityDeposit = matchedSharing.getDeposit() != null ? matchedSharing.getDeposit() : monthlyRent;
         int minimumStayMonths = monthsFor(request.getMinimumStay());
         double totalPayable = (monthlyRent * minimumStayMonths) + securityDeposit;
 
@@ -211,6 +217,7 @@ public class BookingServiceImpl implements BookingService {
         Booking saved = bookingRepository.save(booking);
 
         if (decision == BookingStatus.OWNER_ACCEPTED) {
+            incrementOccupiedCount(saved.getPgId(), saved.getRoomType());
             notificationService.notifyUserBookingAccepted(saved.getUserId(), saved.getPgName());
         } else {
             notificationService.notifyUserBookingRejected(saved.getUserId(), saved.getPgName(), reason);
@@ -220,7 +227,57 @@ public class BookingServiceImpl implements BookingService {
         return bookingMapper.toResponseDTO(saved);
     }
 
+    @Override
+    public BookingResponseDTO confirmPayment(String ownerUserId, String bookingId) {
+        log.info("Owner {} confirming payment for booking {}", ownerUserId, bookingId);
+
+        Booking booking = findOwnerBookingOrThrow(bookingId, ownerUserId);
+
+        if (booking.getStatus() != BookingStatus.OWNER_ACCEPTED) {
+            throw new InvalidBookingStateException(
+                    "Only bookings with status OWNER_ACCEPTED can have payment confirmed. Current status: "
+                            + booking.getStatus());
+        }
+
+        booking.setStatus(BookingStatus.CONFIRMED);
+        booking.setPaymentStatus(PaymentStatus.PAID);
+        booking.setUpdatedAt(LocalDateTime.now());
+        Booking saved = bookingRepository.save(booking);
+
+        notificationService.notifyUserPaymentConfirmed(saved.getUserId(), saved.getPgName());
+
+        log.info("Booking {} confirmed as PAID by owner {}", bookingId, ownerUserId);
+        return bookingMapper.toResponseDTO(saved);
+    }
+
     // ── Private Helpers ──────────────────────────────────────────────────────
+
+    private SharingType findSharingType(PG pg, com.stayo.stayo.booking.enums.RoomType roomType) {
+        if (pg.getSharingType() == null) {
+            return null;
+        }
+        return pg.getSharingType().stream()
+                .filter(st -> st.getType() != null && st.getType().name().equals(roomType.name()))
+                .findFirst()
+                .orElse(null);
+    }
+
+    // Real occupancy tracking, replacing the old hardcoded "availableBeds: 2"
+    // mock on PGCardDTO — increments the matching sharingType's occupiedCount
+    // when the owner accepts a booking. There is no symmetric decrement yet:
+    // cancelBooking only permits cancelling from PENDING_OWNER, so there's no
+    // code path today where an already-accepted booking frees its room back up.
+    private void incrementOccupiedCount(String pgId, com.stayo.stayo.booking.enums.RoomType roomType) {
+        pgRepository.findById(pgId).ifPresent(pg -> {
+            SharingType matched = findSharingType(pg, roomType);
+            if (matched == null) {
+                return;
+            }
+            int current = matched.getOccupiedCount() != null ? matched.getOccupiedCount() : 0;
+            matched.setOccupiedCount(current + 1);
+            pgRepository.save(pg);
+        });
+    }
 
     private int monthsFor(MinimumStay minimumStay) {
         return switch (minimumStay) {

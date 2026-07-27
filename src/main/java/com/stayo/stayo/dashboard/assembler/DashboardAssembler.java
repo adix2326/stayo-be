@@ -11,17 +11,25 @@ import com.stayo.stayo.content.entity.QuickFilter;
 import com.stayo.stayo.dashboard.dto.DashboardResponseDTO;
 import com.stayo.stayo.property.dto.PGCardDTO;
 import com.stayo.stayo.property.entity.PG;
+import com.stayo.stayo.property.service.PGService;
 import com.stayo.stayo.search.dto.SearchDefaultDTO;
 import com.stayo.stayo.user.dto.UserSummaryDTO;
 import com.stayo.stayo.user.entity.User;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Component
+@RequiredArgsConstructor
 public class DashboardAssembler {
+
+    private final PGService pgService;
 
     public DashboardResponseDTO assemble(
             User user,
@@ -67,12 +75,17 @@ public class DashboardAssembler {
                 .map(this::mapToCategoryDTO)
                 .collect(Collectors.toList());
 
+        List<String> allPgIds = Stream.concat(nearbyPGs.stream(), recommendedPGs.stream())
+                .map(PG::getId)
+                .collect(Collectors.toList());
+        Map<String, List<String>> imagesByPgId = pgService.getImageUrlsBatch(allPgIds);
+
         List<PGCardDTO> nearbyPropertyDTOs = nearbyPGs.stream()
-                .map(p -> this.mapToPGCardDTO(p, wishlistedIds))
+                .map(p -> this.mapToPGCardDTO(p, wishlistedIds, imagesByPgId))
                 .collect(Collectors.toList());
 
         List<PGCardDTO> recommendedPropertyDTOs = recommendedPGs.stream()
-                .map(p -> this.mapToPGCardDTO(p, wishlistedIds))
+                .map(p -> this.mapToPGCardDTO(p, wishlistedIds, imagesByPgId))
                 .collect(Collectors.toList());
 
         return DashboardResponseDTO.builder()
@@ -128,10 +141,9 @@ public class DashboardAssembler {
                 .build();
     }
 
-    private PGCardDTO mapToPGCardDTO(PG entity, List<String> wishlistedIds) {
-        String thumbnail = (entity.getImages() != null && !entity.getImages().isEmpty())
-                ? entity.getImages().get(0)
-                : null;
+    private PGCardDTO mapToPGCardDTO(PG entity, List<String> wishlistedIds, Map<String, List<String>> imagesByPgId) {
+        List<String> imageUrls = imagesByPgId.getOrDefault(entity.getId(), Collections.emptyList());
+        String thumbnail = imageUrls.isEmpty() ? null : imageUrls.get(0);
 
         boolean isWishlisted = wishlistedIds != null && wishlistedIds.contains(entity.getId());
 
@@ -141,7 +153,7 @@ public class DashboardAssembler {
                 .thumbnail(thumbnail)
                 .city(entity.getCity())
                 .locality(entity.getLocality())
-                .rent(entity.getRent())
+                .rent(startingRent(entity.getSharingType()))
                 .rating(entity.getRating())
                 .reviewCount(entity.getReviewCount())
                 .verified(true) // Default mock
@@ -151,5 +163,18 @@ public class DashboardAssembler {
                 .availableBeds(2) // Default mock
                 .ownerVerified(true) // Default mock
                 .build();
+    }
+
+    // Display "starting rent" is derived from the cheapest sharing type on the
+    // fly rather than stored on PG — see property.entity.PG / SharingType.
+    private Double startingRent(List<com.stayo.stayo.property.entity.SharingType> sharingTypes) {
+        if (sharingTypes == null || sharingTypes.isEmpty()) {
+            return null;
+        }
+        return sharingTypes.stream()
+                .map(com.stayo.stayo.property.entity.SharingType::getRent)
+                .filter(java.util.Objects::nonNull)
+                .min(java.util.Comparator.naturalOrder())
+                .orElse(null);
     }
 }

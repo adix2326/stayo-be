@@ -2,6 +2,14 @@ package com.stayo.stayo.shared.exception;
 
 import com.stayo.stayo.booking.exception.InvalidBookingRequestException;
 import com.stayo.stayo.booking.exception.InvalidBookingStateException;
+import com.stayo.stayo.owner.exception.InvalidVerificationRequestException;
+import com.stayo.stayo.owner.exception.OwnerAlreadyOnboardedException;
+import com.stayo.stayo.owner.exception.OwnerNotVerifiedException;
+import com.stayo.stayo.owner.exception.OwnerProfileNotFoundException;
+import com.stayo.stayo.property.exception.PropertyAccessDeniedException;
+import com.stayo.stayo.property.exception.TooManyImagesException;
+import com.stayo.stayo.review.exception.DuplicateReviewException;
+import com.stayo.stayo.review.exception.ReviewNotEligibleException;
 import com.stayo.stayo.shared.dto.ApiError;
 import com.stayo.stayo.user.entity.User;
 import com.stayo.stayo.booking.exception.BookingNotFoundException;
@@ -144,6 +152,60 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InvalidBookingRequestException.class)
     public ResponseEntity<ApiError> handleInvalidBookingRequest(InvalidBookingRequestException ex, HttpServletRequest req) {
         ApiError body = new ApiError(HttpStatus.BAD_REQUEST.value(), "Invalid Booking Request", ex.getMessage(), req.getRequestURI());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    @ExceptionHandler(OwnerProfileNotFoundException.class)
+    public ResponseEntity<ApiError> handleOwnerProfileNotFound(OwnerProfileNotFoundException ex, HttpServletRequest req) {
+        ApiError body = new ApiError(HttpStatus.NOT_FOUND.value(), "Owner Profile Not Found", ex.getMessage(), req.getRequestURI());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
+    }
+
+    @ExceptionHandler(OwnerAlreadyOnboardedException.class)
+    public ResponseEntity<ApiError> handleOwnerAlreadyOnboarded(OwnerAlreadyOnboardedException ex, HttpServletRequest req) {
+        ApiError body = new ApiError(HttpStatus.CONFLICT.value(), "Owner Already Onboarded", ex.getMessage(), req.getRequestURI());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+    }
+
+    @ExceptionHandler(InvalidVerificationRequestException.class)
+    public ResponseEntity<ApiError> handleInvalidVerificationRequest(InvalidVerificationRequestException ex, HttpServletRequest req) {
+        ApiError body = new ApiError(HttpStatus.BAD_REQUEST.value(), "Invalid Verification Request", ex.getMessage(), req.getRequestURI());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    @ExceptionHandler(OwnerNotVerifiedException.class)
+    public ResponseEntity<ApiError> handleOwnerNotVerified(OwnerNotVerifiedException ex, HttpServletRequest req) {
+        ApiError body = new ApiError(HttpStatus.FORBIDDEN.value(), "Owner Not Verified", ex.getMessage(), req.getRequestURI());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
+    }
+
+    @ExceptionHandler(PropertyAccessDeniedException.class)
+    public ResponseEntity<ApiError> handlePropertyAccessDenied(PropertyAccessDeniedException ex, HttpServletRequest req) {
+        ApiError body = new ApiError(HttpStatus.FORBIDDEN.value(), "Property Access Denied", ex.getMessage(), req.getRequestURI());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
+    }
+
+    @ExceptionHandler(AdminAccessRequiredException.class)
+    public ResponseEntity<ApiError> handleAdminAccessRequired(AdminAccessRequiredException ex, HttpServletRequest req) {
+        ApiError body = new ApiError(HttpStatus.FORBIDDEN.value(), "Admin Access Required", ex.getMessage(), req.getRequestURI());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
+    }
+
+    @ExceptionHandler(ReviewNotEligibleException.class)
+    public ResponseEntity<ApiError> handleReviewNotEligible(ReviewNotEligibleException ex, HttpServletRequest req) {
+        ApiError body = new ApiError(HttpStatus.BAD_REQUEST.value(), "Review Not Eligible", ex.getMessage(), req.getRequestURI());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    @ExceptionHandler(DuplicateReviewException.class)
+    public ResponseEntity<ApiError> handleDuplicateReview(DuplicateReviewException ex, HttpServletRequest req) {
+        ApiError body = new ApiError(HttpStatus.CONFLICT.value(), "Duplicate Review", ex.getMessage(), req.getRequestURI());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+    }
+
+    @ExceptionHandler(TooManyImagesException.class)
+    public ResponseEntity<ApiError> handleTooManyImages(TooManyImagesException ex, HttpServletRequest req) {
+        ApiError body = new ApiError(HttpStatus.BAD_REQUEST.value(), "Too Many Images", ex.getMessage(), req.getRequestURI());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
 }

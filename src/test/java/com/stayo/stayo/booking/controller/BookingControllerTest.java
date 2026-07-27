@@ -6,14 +6,18 @@ import com.stayo.stayo.booking.dto.BookingResponseDTO;
 import com.stayo.stayo.booking.dto.OccupantDTO;
 import com.stayo.stayo.booking.enums.BookingStatus;
 import com.stayo.stayo.booking.enums.MinimumStay;
+import com.stayo.stayo.booking.enums.PaymentStatus;
 import com.stayo.stayo.booking.enums.RoomType;
 import com.stayo.stayo.booking.exception.BookingNotFoundException;
 import com.stayo.stayo.booking.exception.DuplicateBookingException;
 import com.stayo.stayo.booking.exception.InvalidBookingStateException;
 import com.stayo.stayo.booking.repository.BookingRepository;
 import com.stayo.stayo.property.entity.PG;
+import com.stayo.stayo.property.entity.SharingType;
+import com.stayo.stayo.property.enums.RoomSharingType;
 import com.stayo.stayo.property.repository.PGRepository;
 import com.stayo.stayo.shared.dto.ApiResponse;
+import com.stayo.stayo.shared.enums.Amenity;
 import com.stayo.stayo.shared.exception.InvalidTokenException;
 import com.stayo.stayo.shared.exception.MissingAuthorizationException;
 import com.stayo.stayo.user.entity.User;
@@ -31,7 +35,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -52,7 +55,9 @@ class BookingControllerTest {
     @Autowired private JwtProvider jwtProvider;
 
     private String validToken;
+    private String ownerToken;
     private User savedUser;
+    private User savedOwner;
     private PG savedPg;
 
     @BeforeEach
@@ -78,7 +83,8 @@ class BookingControllerTest {
                 .city("Pune")
                 .profileCompleted(true)
                 .build();
-        User savedOwner = userRepository.save(owner);
+        savedOwner = userRepository.save(owner);
+        ownerToken = "Bearer " + jwtProvider.generateToken(savedOwner.getId());
 
         PG pg = PG.builder()
                 .pgName("Test Cozy PG")
@@ -86,10 +92,11 @@ class BookingControllerTest {
                 .city("Pune")
                 .locality("Hinjewadi")
                 .address("Near IT Park, Pune")
-                .rent(8000.0)
-                .rentByRoomType(Map.of(RoomType.SINGLE, 8000.0, RoomType.DOUBLE, 6000.0))
-                .securityDeposit(8000.0)
-                .amenities(List.of("WiFi", "AC"))
+                .sharingType(List.of(
+                        SharingType.builder().type(RoomSharingType.SINGLE).rent(8000.0).deposit(8000.0).count(4).occupiedCount(0).build(),
+                        SharingType.builder().type(RoomSharingType.DOUBLE).rent(6000.0).deposit(6000.0).count(4).occupiedCount(0).build()
+                ))
+                .amenities(List.of(Amenity.WIFI, Amenity.AC))
                 .isFeatured(true)
                 .isActive(true)
                 .ownerId(savedOwner.getId())
@@ -279,6 +286,64 @@ class BookingControllerTest {
             // Second cancel should throw
             assertThrows(InvalidBookingStateException.class, () ->
                     bookingController.cancelBooking(validToken, bookingId));
+        }
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    //  PATCH /api/booking/owner/{bookingId}/confirm-payment
+    // ════════════════════════════════════════════════════════════════════════
+
+    @Nested
+    @DisplayName("PATCH /api/booking/owner/{id}/confirm-payment — confirmPayment")
+    class ConfirmPaymentTests {
+
+        @Test
+        @DisplayName("Success — OWNER_ACCEPTED → CONFIRMED + PAID")
+        void confirmPayment_success() {
+            ResponseEntity<ApiResponse<BookingResponseDTO>> createResp =
+                    bookingController.createBooking(validToken, validRequest());
+            String bookingId = createResp.getBody().getData().getBookingId();
+
+            bookingController.acceptBooking(ownerToken, bookingId);
+
+            ResponseEntity<ApiResponse<BookingResponseDTO>> response =
+                    bookingController.confirmPayment(ownerToken, bookingId);
+
+            assertEquals(200, response.getStatusCode().value());
+            BookingResponseDTO data = response.getBody().getData();
+            assertEquals(BookingStatus.CONFIRMED, data.getStatus());
+            assertEquals(PaymentStatus.PAID, data.getPaymentStatus());
+        }
+
+        @Test
+        @DisplayName("Before accept (still PENDING_OWNER) → InvalidBookingStateException")
+        void confirmPayment_beforeAccept_invalidState() {
+            ResponseEntity<ApiResponse<BookingResponseDTO>> createResp =
+                    bookingController.createBooking(validToken, validRequest());
+            String bookingId = createResp.getBody().getData().getBookingId();
+
+            assertThrows(InvalidBookingStateException.class, () ->
+                    bookingController.confirmPayment(ownerToken, bookingId));
+        }
+
+        @Test
+        @DisplayName("Called by a different owner → BookingNotFoundException")
+        void confirmPayment_wrongOwner() {
+            ResponseEntity<ApiResponse<BookingResponseDTO>> createResp =
+                    bookingController.createBooking(validToken, validRequest());
+            String bookingId = createResp.getBody().getData().getBookingId();
+            bookingController.acceptBooking(ownerToken, bookingId);
+
+            User otherOwner = userRepository.save(User.builder()
+                    .name("Other Owner")
+                    .email("other-owner@example.com")
+                    .city("Pune")
+                    .profileCompleted(true)
+                    .build());
+            String otherOwnerToken = "Bearer " + jwtProvider.generateToken(otherOwner.getId());
+
+            assertThrows(BookingNotFoundException.class, () ->
+                    bookingController.confirmPayment(otherOwnerToken, bookingId));
         }
     }
 }

@@ -45,4 +45,14 @@ public class NotificationService {
                 userId, pgName, reason != null ? reason : "not specified");
         // TODO: Integrate Firebase Push Notification for user
     }
+
+    /**
+     * Notify the user that the PG owner confirmed payment for their booking.
+     * Currently logs the event; will integrate Firebase Push in a future iteration.
+     */
+    public void notifyUserPaymentConfirmed(String userId, String pgName) {
+        log.info("NOTIFICATION → User [{}]: Payment confirmed for PG '{}' — your booking is now CONFIRMED",
+                userId, pgName);
+        // TODO: Integrate Firebase Push Notification for user
+    }
 }

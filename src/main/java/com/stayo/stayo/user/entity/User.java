@@ -41,11 +41,27 @@ public class User {
     // profile
     private String bio;
     private String profileImage;
+    private String profileImagePublicId;
 
-    // Authentication
-    private Role role;
+    // Authentication — `roles` is the sole source of truth for what an
+    // account can act as (USER/PG_OWNER/ADMIN, any combination).
+    private java.util.List<Role> roles;
     private boolean phoneVerified;
     private boolean profileCompleted;
+
+    public java.util.List<Role> getRoles() {
+        if (roles == null) roles = new java.util.ArrayList<>();
+        return roles;
+    }
+
+    // Defensive-only: every code path that creates a User sets `roles`
+    // explicitly (see AuthService). This just guards against an empty list
+    // ever reaching a role check.
+    public void ensureRolesInitialized() {
+        if (!getRoles().contains(Role.USER)) {
+            roles.add(Role.USER);
+        }
+    }
 
     // Wishlist
     private java.util.List<String> wishlistPropertyIds;

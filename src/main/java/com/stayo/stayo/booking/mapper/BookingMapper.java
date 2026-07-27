@@ -36,6 +36,8 @@ public class BookingMapper {
                 .securityDeposit(booking.getSecurityDeposit())
                 .totalPayable(booking.getTotalPayable())
                 .status(booking.getStatus())
+                .paymentStatus(booking.getPaymentStatus())
+                .transactionId(booking.getTransactionId())
                 .createdAt(booking.getCreatedAt())
                 .build();
     }

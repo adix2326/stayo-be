@@ -7,6 +7,7 @@ import com.stayo.stayo.booking.entity.Booking;
 import com.stayo.stayo.booking.entity.OccupantInfo;
 import com.stayo.stayo.booking.enums.BookingStatus;
 import com.stayo.stayo.booking.enums.MinimumStay;
+import com.stayo.stayo.booking.enums.PaymentStatus;
 import com.stayo.stayo.booking.enums.RoomType;
 import com.stayo.stayo.booking.exception.BookingNotFoundException;
 import com.stayo.stayo.booking.exception.DuplicateBookingException;
@@ -16,6 +17,8 @@ import com.stayo.stayo.booking.mapper.BookingMapper;
 import com.stayo.stayo.booking.repository.BookingRepository;
 import com.stayo.stayo.notification.service.NotificationService;
 import com.stayo.stayo.property.entity.PG;
+import com.stayo.stayo.property.entity.SharingType;
+import com.stayo.stayo.property.enums.RoomSharingType;
 import com.stayo.stayo.property.repository.PGRepository;
 import com.stayo.stayo.shared.exception.PropertyNotFoundException;
 import com.stayo.stayo.shared.exception.UserNotFoundException;
@@ -36,7 +39,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -73,9 +75,10 @@ class BookingServiceImplTest {
                 .pgName("Test PG")
                 .city("Pune")
                 .locality("Hinjewadi")
-                .rent(8000.0)
-                .rentByRoomType(Map.of(RoomType.SINGLE, 8000.0, RoomType.DOUBLE, 6000.0))
-                .securityDeposit(8000.0)
+                .sharingType(List.of(
+                        SharingType.builder().type(RoomSharingType.SINGLE).rent(8000.0).deposit(8000.0).count(4).occupiedCount(0).build(),
+                        SharingType.builder().type(RoomSharingType.DOUBLE).rent(6000.0).deposit(6000.0).count(4).occupiedCount(0).build()
+                ))
                 .ownerId(OWNER_ID)
                 .isActive(true)
                 .build();
@@ -189,8 +192,9 @@ class BookingServiceImplTest {
 
             Booking captured = captor.getValue();
             assertEquals(6000.0, captured.getMonthlyRent());
-            // totalPayable = (6000 * 3) + 8000 = 26000
-            assertEquals(26000.0, captured.getTotalPayable());
+            // Deposit is now per-sharing-type (DOUBLE's own deposit is 6000,
+            // not PG's old single flat securityDeposit) — totalPayable = (6000 * 3) + 6000 = 24000
+            assertEquals(24000.0, captured.getTotalPayable());
         }
 
         @Test
@@ -305,7 +309,9 @@ class BookingServiceImplTest {
         @DisplayName("Room type not available on PG → InvalidBookingRequestException")
         void createBooking_roomTypeNotAvailable() {
             // PG only has SINGLE and DOUBLE; remove SINGLE to simulate unavailable
-            testPg.setRentByRoomType(Map.of(RoomType.DOUBLE, 6000.0));
+            testPg.setSharingType(List.of(
+                    SharingType.builder().type(RoomSharingType.DOUBLE).rent(6000.0).deposit(6000.0).count(4).occupiedCount(0).build()
+            ));
 
             when(pgRepository.findById(PG_ID)).thenReturn(Optional.of(testPg));
             when(userRepository.findById(USER_ID)).thenReturn(Optional.of(testUser));
@@ -418,6 +424,66 @@ class BookingServiceImplTest {
         void respondToBooking_invalidDecision() {
             assertThrows(InvalidBookingRequestException.class, () ->
                     bookingService.respondToBooking(OWNER_ID, VALID_BOOKING_ID, BookingStatus.CONFIRMED, null));
+        }
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    //  confirmPayment — owner confirms payment
+    // ════════════════════════════════════════════════════════════════════════
+
+    @Nested
+    @DisplayName("confirmPayment — owner confirms payment")
+    class ConfirmPaymentTests {
+
+        @Test
+        @DisplayName("Confirm OWNER_ACCEPTED → sets status CONFIRMED + paymentStatus PAID + notification")
+        void confirmPayment_success() {
+            Booking accepted = savedBooking(BookingStatus.OWNER_ACCEPTED);
+            when(bookingRepository.findByIdAndPgOwnerId(VALID_BOOKING_ID, OWNER_ID))
+                    .thenReturn(Optional.of(accepted));
+            when(bookingRepository.save(any(Booking.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(bookingMapper.toResponseDTO(any())).thenReturn(BookingResponseDTO.builder().build());
+
+            bookingService.confirmPayment(OWNER_ID, VALID_BOOKING_ID);
+
+            assertEquals(BookingStatus.CONFIRMED, accepted.getStatus());
+            assertEquals(PaymentStatus.PAID, accepted.getPaymentStatus());
+            verify(bookingRepository).save(accepted);
+            verify(notificationService).notifyUserPaymentConfirmed(eq(USER_ID), eq("Test PG"));
+        }
+
+        @Test
+        @DisplayName("Confirm still-PENDING_OWNER → InvalidBookingStateException")
+        void confirmPayment_invalidState_pending() {
+            Booking pending = savedBooking(BookingStatus.PENDING_OWNER);
+            when(bookingRepository.findByIdAndPgOwnerId(VALID_BOOKING_ID, OWNER_ID))
+                    .thenReturn(Optional.of(pending));
+
+            assertThrows(InvalidBookingStateException.class, () ->
+                    bookingService.confirmPayment(OWNER_ID, VALID_BOOKING_ID));
+            verify(bookingRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Confirm already-CONFIRMED → InvalidBookingStateException (blocks double-confirm)")
+        void confirmPayment_invalidState_alreadyConfirmed() {
+            Booking confirmed = savedBooking(BookingStatus.CONFIRMED);
+            when(bookingRepository.findByIdAndPgOwnerId(VALID_BOOKING_ID, OWNER_ID))
+                    .thenReturn(Optional.of(confirmed));
+
+            assertThrows(InvalidBookingStateException.class, () ->
+                    bookingService.confirmPayment(OWNER_ID, VALID_BOOKING_ID));
+            verify(bookingRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Non-existent / not-owned booking → BookingNotFoundException")
+        void confirmPayment_notFound() {
+            when(bookingRepository.findByIdAndPgOwnerId(VALID_BOOKING_ID, OWNER_ID))
+                    .thenReturn(Optional.empty());
+
+            assertThrows(BookingNotFoundException.class, () ->
+                    bookingService.confirmPayment(OWNER_ID, VALID_BOOKING_ID));
         }
     }
 

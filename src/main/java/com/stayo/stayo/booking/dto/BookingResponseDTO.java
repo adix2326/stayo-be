@@ -2,6 +2,7 @@ package com.stayo.stayo.booking.dto;
 
 import com.stayo.stayo.booking.enums.BookingStatus;
 import com.stayo.stayo.booking.enums.MinimumStay;
+import com.stayo.stayo.booking.enums.PaymentStatus;
 import com.stayo.stayo.booking.enums.RoomType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -50,6 +51,8 @@ public class BookingResponseDTO {
     private Double totalPayable;
 
     private BookingStatus status;
+    private PaymentStatus paymentStatus;
+    private String transactionId;
 
     private LocalDateTime createdAt;
 }
