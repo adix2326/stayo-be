@@ -19,6 +19,7 @@ public interface PGService {
     PGResponse createProperty(String ownerId, PropertyRequestDTO request);
     PGResponse updateProperty(String ownerId, String propertyId, PropertyRequestDTO request);
     void deactivateProperty(String ownerId, String propertyId);
+    void reactivateProperty(String ownerId, String propertyId);
     String uploadPropertyImage(String ownerId, String propertyId, MultipartFile file);
     List<PGResponse> getMyProperties(String ownerId);
 

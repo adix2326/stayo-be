@@ -172,6 +172,33 @@ class PGServiceImplTest {
     }
 
     @Nested
+    @DisplayName("reactivateProperty")
+    class ReactivatePropertyTests {
+
+        @Test
+        @DisplayName("Owner matches — sets isActive true")
+        void reactivateProperty_owned() {
+            PG pg = existingOwnedPg();
+            pg.setIsActive(false);
+            when(pgRepository.findById(PG_ID)).thenReturn(Optional.of(pg));
+            when(pgRepository.save(any(PG.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            pgService.reactivateProperty(OWNER_ID, PG_ID);
+
+            assertTrue(pg.getIsActive());
+        }
+
+        @Test
+        @DisplayName("Different owner — throws PropertyAccessDeniedException")
+        void reactivateProperty_notOwned() {
+            when(pgRepository.findById(PG_ID)).thenReturn(Optional.of(existingOwnedPg()));
+
+            assertThrows(PropertyAccessDeniedException.class,
+                    () -> pgService.reactivateProperty(OTHER_OWNER_ID, PG_ID));
+        }
+    }
+
+    @Nested
     @DisplayName("getMyProperties")
     class GetMyPropertiesTests {
 

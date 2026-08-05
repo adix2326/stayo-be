@@ -269,6 +269,26 @@ class PGControllerTest {
     }
 
     @Nested
+    @DisplayName("PATCH /api/properties/{id}/reactivate — reactivateProperty")
+    class ReactivatePropertyTests {
+
+        @Test
+        @DisplayName("Owner reactivates own property — active again")
+        void reactivateProperty_success() {
+            approveSavedUserAsOwner();
+            String propertyId = pgController.createProperty(validToken, validPropertyRequest())
+                    .getBody().getData().getId();
+            pgController.deactivateProperty(validToken, propertyId);
+
+            ResponseEntity<ApiResponse<Void>> response =
+                    pgController.reactivateProperty(validToken, propertyId);
+
+            assertEquals(200, response.getStatusCode().value());
+            assertTrue(pgRepository.findById(propertyId).orElseThrow().getIsActive());
+        }
+    }
+
+    @Nested
     @DisplayName("GET /api/properties/owner/mine — getMyProperties")
     class GetMyPropertiesTests {
 

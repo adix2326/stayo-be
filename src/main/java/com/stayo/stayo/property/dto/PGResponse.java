@@ -27,4 +27,5 @@ public class PGResponse {
     private Double rating;
     private Integer reviewCount;
     private Boolean isWishlisted;
+    private Boolean isActive;
 }

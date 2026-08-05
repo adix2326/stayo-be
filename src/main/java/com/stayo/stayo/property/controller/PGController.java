@@ -96,6 +96,16 @@ public class PGController {
         return ResponseEntity.ok(ApiResponse.success(null, "Property deactivated successfully"));
     }
 
+    @Operation(summary = "Reactivate a previously deactivated PG listing owned by the authenticated owner")
+    @PatchMapping("/{id}/reactivate")
+    public ResponseEntity<ApiResponse<Void>> reactivateProperty(
+            @RequestHeader(value = "Authorization", required = false) String token,
+            @PathVariable String id) {
+        String ownerId = authUtil.extractUserIdFromToken(token);
+        pgService.reactivateProperty(ownerId, id);
+        return ResponseEntity.ok(ApiResponse.success(null, "Property reactivated successfully"));
+    }
+
     @Operation(summary = "Upload an image for a PG listing owned by the authenticated owner")
     @PostMapping(value = "/{id}/images", consumes = "multipart/form-data")
     public ResponseEntity<ApiResponse<String>> uploadPropertyImage(

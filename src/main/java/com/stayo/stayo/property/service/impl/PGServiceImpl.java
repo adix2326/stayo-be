@@ -84,6 +84,7 @@ public class PGServiceImpl implements PGService {
                 .rating(property.getRating())
                 .reviewCount(property.getReviewCount())
                 .isWishlisted(false) // Default, overridden if user is authenticated
+                .isActive(property.getIsActive())
                 .build();
     }
 
@@ -359,6 +360,15 @@ public class PGServiceImpl implements PGService {
         property.setUpdatedAt(LocalDateTime.now());
         pgRepository.save(property);
         log.info("Property deactivated: {} by owner: {}", propertyId, ownerId);
+    }
+
+    @Override
+    public void reactivateProperty(String ownerId, String propertyId) {
+        PG property = findOwnedProperty(ownerId, propertyId);
+        property.setIsActive(true);
+        property.setUpdatedAt(LocalDateTime.now());
+        pgRepository.save(property);
+        log.info("Property reactivated: {} by owner: {}", propertyId, ownerId);
     }
 
     @Override
