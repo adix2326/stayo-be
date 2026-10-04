@@ -1,11 +1,13 @@
 package com.stayo.stayo.user.repository;
 
+import com.stayo.stayo.user.entity.Role;
 import com.stayo.stayo.user.entity.User;
 
 
 
 import org.springframework.data.mongodb.repository.MongoRepository;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface UserRepository extends MongoRepository<User, String> {
@@ -14,4 +16,6 @@ public interface UserRepository extends MongoRepository<User, String> {
 
     Optional<User> findByMobileNumber(String mobileNumber);
     boolean existsByMobileNumber(String mobileNumber);
+
+    List<User> findByRolesIn(List<Role> roles);
 }

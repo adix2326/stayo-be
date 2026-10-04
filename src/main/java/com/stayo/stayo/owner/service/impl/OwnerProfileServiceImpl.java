@@ -102,7 +102,7 @@ public class OwnerProfileServiceImpl implements OwnerProfileService {
         User caller = userRepository.findById(callerId)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
         caller.ensureRolesInitialized();
-        if (!caller.getRoles().contains(Role.ADMIN)) {
+        if (!caller.isAdmin()) {
             throw new AdminAccessRequiredException("Only an admin can approve or reject owner verification");
         }
 
@@ -121,6 +121,20 @@ public class OwnerProfileServiceImpl implements OwnerProfileService {
         OwnerProfile saved = ownerProfileRepository.save(profile);
         log.info("Owner profile verification for user {} set to {}", targetUserId, request.getStatus());
         return mapToResponse(saved);
+    }
+
+    @Override
+    public java.util.List<OwnerProfileResponseDTO> listByStatus(String callerId, VerificationStatus status) {
+        User caller = userRepository.findById(callerId)
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
+        caller.ensureRolesInitialized();
+        if (!caller.isAdmin()) {
+            throw new AdminAccessRequiredException("Only an admin can view owner verification submissions");
+        }
+
+        return ownerProfileRepository.findByVerificationStatus(status).stream()
+                .map(this::mapToResponse)
+                .collect(java.util.stream.Collectors.toList());
     }
 
     @Override

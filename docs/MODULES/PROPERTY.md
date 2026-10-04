@@ -48,3 +48,18 @@ com.stayo.stayo.property
 ## Future Improvements
 - Implement true Geospatial indexing (`2dsphere`) on the `location` field for the `NearbyPGService`.
 - Expand the entity to include granular room availability (single, double, triple sharing) rather than a flat `rent`.
+
+## Owner Endpoints & Current Behaviour (update)
+The sections above describe the original read-only module. Current endpoints under `/api/properties`:
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/search` | Filters: `searchString`, `city`, `locality`, `gender`, `minPrice`, `maxPrice`, `amenities`, `sortBy` (`price_asc`/`price_desc`/`rating_desc`), `pageNumber`, `size` |
+| GET | `/{id}` | Full `PGResponse`; records a `PGView` |
+| GET | `/owner/mine` | PGs owned by the caller |
+| POST | `/` | Create; requires an approved `OwnerProfile` (`OwnerNotVerifiedException` 403) |
+| PUT | `/{id}` | Update; owner only (`PropertyAccessDeniedException` 403) |
+| PATCH | `/{id}/deactivate`, `/{id}/reactivate` | Soft delete / restore (`isActive`) |
+| POST | `/{id}/images` | Multipart image upload via Cloudinary; capped by `MAX_IMAGES_PER_PG` (`TooManyImagesException`) |
+
+Per-sharing pricing now exists: `PG.rentByRoomType` and `SharingType` entries drive booking prices. Additional classes: `PropertyRequestDTO`, `SharingTypeDTO`, `SharingTypeRequestDTO`, `Image`, `PGImages`, `RoomSharingType`, `PGImagesRepository`. `PGService.recordReview` updates `rating`/`reviewCount` from the `review` module.

@@ -22,6 +22,7 @@ Detailed documentation for each backend module:
 - [Booking](MODULES/BOOKING.md)
 - [Content](MODULES/CONTENT.md)
 - [Notification](MODULES/NOTIFICATION.md)
+- Owner, Admin, Review, Document, Storage modules: documented in [`AI_BE_CONTEXT.md`](../AI_BE_CONTEXT.md) §4–§8 (no standalone page yet)
 
 ### 🔌 API Reference
 - [API Reference](API/API_REFERENCE.md)
@@ -43,11 +44,6 @@ Detailed documentation for each backend module:
 - [State Management](FRONTEND/STATE_MANAGEMENT.md)
 - [API Integration](FRONTEND/API_INTEGRATION.md)
 
-### 🚀 Deployment & Security
-- [Build Process](DEPLOYMENT/BUILD.md)
-- [Environment Variables](DEPLOYMENT/ENVIRONMENT.md)
-- [Security Guidelines](DEPLOYMENT/SECURITY.md)
-- [Performance](DEPLOYMENT/PERFORMANCE.md)
 
 ### 📜 Guidelines
 - [Coding Standards](GUIDELINES/CODING_STANDARDS.md)
@@ -57,4 +53,4 @@ Detailed documentation for each backend module:
 - [Roadmap](GUIDELINES/ROADMAP.md)
 
 ---
-*This documentation is strictly derived from the actual StayO codebase implementation.*
+*Source of truth for the backend is [`AI_BE_CONTEXT.md`](../AI_BE_CONTEXT.md); update it first when code changes. Last full sync: 2026-10-04.*

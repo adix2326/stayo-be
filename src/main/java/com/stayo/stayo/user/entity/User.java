@@ -63,6 +63,16 @@ public class User {
         }
     }
 
+    // SUPER_ADMIN implicitly has every ADMIN capability — checked together
+    // wherever an endpoint requires "admin required" (see AdminAccessRequiredException usages).
+    public boolean isAdmin() {
+        return getRoles().contains(Role.ADMIN) || getRoles().contains(Role.SUPER_ADMIN);
+    }
+
+    public boolean isSuperAdmin() {
+        return getRoles().contains(Role.SUPER_ADMIN);
+    }
+
     // Wishlist
     private java.util.List<String> wishlistPropertyIds;
 

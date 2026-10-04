@@ -78,6 +78,12 @@ sequenceDiagram
 - **PUT `/api/auth/update-details`**: Updates name and email. Marks `profileCompleted` as true. Requires JWT.
 - **POST `/api/auth/logout`**: Invalidates the current JWT token. Requires JWT.
 
+
+## Roles
+`User.roles` is a list of `USER`, `PG_OWNER`, `ADMIN`, `SUPER_ADMIN`. A new account gets `[PG_OWNER]` when `viaOwnerOnboarding=true` is sent to `/otp/verify`, otherwise `[USER]`; existing users' roles are never changed at login. `AuthResponse.dualRoleAvailable` is true whenever the account holds `PG_OWNER` (drives the frontend role picker).
+
+`AuthService.ensureSuperAdminRole` grants `SUPER_ADMIN` on every login when the mobile number equals `app.super-admin.mobile-number` (env `SUPER_ADMIN_MOBILE_NUMBER`). Other admins are granted by the super admin through `POST /api/admin/admins`. See `AI_BE_CONTEXT.md` §5.
+
 ## Entities
 - **BlacklistedToken**: Stores invalidated JWT tokens to prevent reuse before expiration.
 - *(Note: OTP entities reside in `user.entity.OtpRequest` and User resides in `user.entity.User`, showing tight coupling with User module).*
@@ -96,7 +102,7 @@ sequenceDiagram
 
 ## Security
 - **JWT**: Stateless. Contains `userId`, `name`, `email`, and `mobileNumber` as claims.
-- **Logout Strategy**: Token Blacklisting. Valid tokens are stored in the database's `BlacklistedToken` collection upon logout until their natural expiration.
+- **Logout Strategy**: Token blacklisting. Logout stores the token in `BlacklistedToken`; `AuthUtil.extractUserIdFromToken` rejects blacklisted tokens (there is no JWT filter; the security chain is `permitAll()` and auth is checked per endpoint).
 - **OTP Protection**: Max 3 attempts allowed before OTP deletion, preventing brute force. 
 
 ## Known Limitations

@@ -1,203 +1,97 @@
-# StayO Backend Application
+# StayO Backend
 
-Find Smarter, Live Better. StayO is a modern co-living and property rental platform backend built with Spring Boot, Spring Security, MongoDB, and Twilio SMS.
+Find Smarter, Live Better. StayO is a mobile-first PG (Paying Guest) discovery and booking platform for India. This repo is the Spring Boot REST API.
 
----
+For the full, code-accurate reference (modules, endpoints, data model, quirks) see [`AI_BE_CONTEXT.md`](AI_BE_CONTEXT.md). Per-module docs live in [`docs/`](docs/README.md).
 
-## 🚀 Technology Stack
+## Technology Stack
 
-- **Core Framework**: Spring Boot 3.4+ / Java 25
-- **Database**: MongoDB (Spring Data MongoDB)
-- **Security**: Spring Security (Stateful blacklisting + stateless JWT claims-based authorization)
-- **SMS / OTP Delivery**: Twilio SMS SDK
-- **API Documentation**: Springdoc OpenAPI / Swagger UI
-- **Build System**: Maven Wrapper
+- Java 25, Spring Boot 4.1.0, Maven wrapper
+- MongoDB (Spring Data MongoDB, Atlas)
+- Spring Security (permissive filter chain) + manual JWT auth (jjwt 0.12.3)
+- Twilio SMS for OTP (static OTP dev mode available)
+- Cloudinary for all file uploads (profile images, owner documents, property images)
+- springdoc-openapi 2.8.5 (Swagger UI)
+- Lombok, JUnit, Mockito
 
----
+## Modules
 
-## 📁 Project Structure
+Modular monolith under `src/main/java/com/stayo/stayo`:
 
-The project follows a component-based package architecture:
+| Module | Purpose |
+|---|---|
+| `auth` | Phone-OTP login/signup, JWT, logout (token blacklist) |
+| `user` | User entity, roles, profile + profile image |
+| `property` | PG listings, search, owner CRUD, view tracking, nearby/recommended |
+| `booking` | Booking requests; owner accept / reject / confirm-payment; user cancel |
+| `owner` | Owner onboarding, verification status, owner dashboard |
+| `admin` | Owner-verification review queue; admin management (super admin only) |
+| `review` | PG reviews (requires a confirmed + paid booking) |
+| `wishlist` | Saved PGs (stored on `User`) |
+| `dashboard`, `content`, `search` | Home screen aggregation, seeded content, cities |
+| `document`, `storage`, `notification` | Document records, Cloudinary storage, notifications/SMS |
+| `config`, `common`, `shared` | Security/CORS/OpenAPI/seeders, health, shared DTOs + exceptions |
 
-```text
-src/main/java/com/stayo/stayo
-│
-├── auth/                      # Authentication & Registration Module
-│   ├── controller/            # Auth controllers (OTP endpoints)
-│   ├── dto/                   # Request/Response DTOs (OtpRequestDto, UpdateUserDto, etc.)
-│   ├── entity/                # Auth-specific entities (BlacklistedToken)
-│   ├── repository/            # BlacklistedTokenRepository
-│   └── service/               # AuthService & OtpService logic
-│
-├── user/                      # User Profile Module
-│   ├── controller/            # UserProfileController
-│   ├── service/               # UserProfileService (Profile logic, Image management)
-│   ├── repository/            # UserRepository, OtpRepository
-│   ├── entity/                # User & OtpRequest schemas
-│   ├── dto/                   # UpdateProfileRequest, UserProfileResponse, etc.
-│   └── enums/                 # Gender, Role enums
-│
-├── config/                    # Global Configuration
-│   ├── SecurityConfig.java    # Spring Security & CORS configuration
-│   └── WebConfig.java         # Static uploads folder serving configuration
-│
-└── common/                    # Shared Utility & Infrastructure Layer
-    ├── exception/             # GlobalExceptionHandler and Custom Domain Exceptions
-    ├── response/              # Standard ApiError and Response utilities
-    ├── security/              # JwtProvider utilities
-    ├── service/               # HealthCheckPingService
-    └── util/                  # AuthUtil helper
+Roles: `USER`, `PG_OWNER`, `ADMIN`, `SUPER_ADMIN` (an account can hold several). The mobile number in `app.super-admin.mobile-number` is auto-granted `SUPER_ADMIN` on login.
+
+## API Overview
+
+All authenticated endpoints take `Authorization: Bearer <JWT>`. Responses use the `ApiResponse<T>` envelope (a few user/profile endpoints return raw DTOs).
+
+| Area | Base path |
+|---|---|
+| Auth | `/api/auth` (`otp/send`, `otp/verify`, `update-details`, `logout`) |
+| User | `/api/users/me`, `/api/user/profile`, `/api/user/dashboard` |
+| Properties | `/api/properties` (search, details, owner CRUD, deactivate/reactivate, images) |
+| Wishlist | `/api/wishlist` |
+| Booking | `/api/booking` (user) and `/api/booking/owner/...` (owner) |
+| Owner | `/api/owner` (dashboard, onboarding, documents, verify) |
+| Admin | `/api/admin` (owners, admins) |
+| Reviews | `/api/reviews`, `/api/properties/{pgId}/reviews` |
+| Infra | `/health`, `/swagger-ui.html`, `/v3/api-docs` |
+
+Full endpoint tables: [`AI_BE_CONTEXT.md` §6](AI_BE_CONTEXT.md) and [`docs/API/API_REFERENCE.md`](docs/API/API_REFERENCE.md).
+
+## Configuration
+
+`src/main/resources/application.properties`; every secret reads an env var with a dev fallback.
+
+| Env var | Purpose |
+|---|---|
+| `MONGODB_URI` | MongoDB connection string |
+| `JWT_SECRET` | JWT signing key |
+| `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_MOBILE_NUMBER` | Twilio SMS |
+| `OTP_USE_STATIC` | `true` (default) = OTP is always `123456`; **set `false` in production** |
+| `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | File storage |
+| `SUPER_ADMIN_MOBILE_NUMBER` | Number auto-granted `SUPER_ADMIN` (E.164) |
+| `PORT` | HTTP port (default `8082`; Docker image defaults to `8080`) |
+
+> **Security:** `application.properties` currently contains committed fallback credentials (MongoDB URI, JWT secret, Cloudinary key/secret). Rotate them and rely on env vars only.
+
+Fixed settings: JWT expiry 24 h, OTP expiry 5 min, max 3 OTP attempts, multipart upload limit 8 MB.
+
+## Local Development
+
+Prerequisites: JDK 25, a reachable MongoDB.
+
+```powershell
+$env:MONGODB_URI="mongodb://localhost:27017/stayo"
+$env:OTP_USE_STATIC="true"
+.\mvnw spring-boot:run     # http://localhost:8082
+.\mvnw test                # run tests
+.\mvnw clean package       # build jar
 ```
 
----
+Swagger UI: http://localhost:8082/swagger-ui.html (use **Authorize** to paste a JWT).
 
-## 🛠️ Configuration (`application.properties`)
+Docker: multi-stage `Dockerfile` (`eclipse-temurin:25-jdk` build → `25-jre` runtime), serves on `$PORT` (default 8080).
 
-Configure the following application properties (either directly or via environment variables):
+## Deployment
 
-### 1. Database
-- `spring.mongodb.uri`: MongoDB Connection URI. Defaults to `mongodb://localhost:27017/stayo`.
+Hosted on Render: `https://stayo-be.onrender.com` (Swagger at `/swagger-ui.html`). A keep-alive scheduler pings the service so the free-tier instance stays warm.
 
-### 2. JWT Configuration
-- `jwt.secret`: Secret key used for signing JWTs.
-- `jwt.expiration`: Access token duration (default: `86400000` ms / 24 hours).
+## Documentation Map
 
-### 3. Twilio SMS Integration
-- `twilio.account-sid`: Your Twilio account SID.
-- `twilio.auth-token`: Your Twilio auth token.
-- `twilio.phone-number`: Your Twilio-provided virtual phone number.
-
-### 4. OTP Settings
-- `otp.expiry-minutes`: Lifetime of generated OTPs in minutes (default: `5`).
-- `otp.max-attempts`: Maximum failed OTP verification attempts before invalidation (default: `3`).
-- `otp.static-code`: Code used in Mock/Static OTP mode (default: `123456`).
-- `otp.use-static`: Toggle whether to use mock local OTPs or send real SMS via Twilio. Defaults to `true` (Local Mock Mode) to conserve trial API credits. Set to `false` for real-device SMS testing.
-
----
-
-## 🔌 API Endpoints Documentation
-
-### 🔓 Authentication Endpoints (`/api/auth/**`)
-
-#### 1. Request OTP
-- **Endpoint**: `POST /api/auth/otp/send`
-- **Body**:
-  ```json
-  {
-    "mobileNumber": "+919876543210"
-  }
-  ```
-- **Response**: String confirmation. Triggers Twilio SMS (or logs static code `123456`).
-
-#### 2. Verify OTP
-- **Endpoint**: `POST /api/auth/otp/verify`
-- **Body**:
-  ```json
-  {
-    "mobileNumber": "+919876543210",
-    "otp": "123456"
-  }
-  ```
-- **Response**: JWT access token, user ID, role, and basic profile info (signs up new users or logs in existing users).
-
-#### 3. Complete Initial Profile
-- **Endpoint**: `PUT /api/auth/update-details`
-- **Headers**: `Authorization: Bearer <JWT>`
-- **Body**:
-  ```json
-  {
-    "name": "John Doe",
-    "email": "john.doe@example.com"
-  }
-  ```
-- **Response**: Updated user metadata. Marks `profileCompleted = true` once both fields are filled.
-
-#### 4. Logout
-- **Endpoint**: `POST /api/auth/logout`
-- **Headers**: `Authorization: Bearer <JWT>`
-- **Response**: Success status. Blacklists the JWT until its original expiration.
-
----
-
-### 🔒 User Profile Endpoints (`/api/user/profile/**`)
-
-*All profile endpoints require a valid `Authorization: Bearer <JWT>` header.*
-
-#### 1. Get Profile
-- **Endpoint**: `GET /api/user/profile`
-- **Response**: Complete user details including `profileCompleted` (boolean) and `completionPercentage` (integer value out of 100).
-
-#### 2. Update Profile Details
-- **Endpoint**: `PUT /api/user/profile`
-- **Body** (Partial updates supported):
-  ```json
-  {
-    "occupation": "Software Engineer",
-    "city": "Mumbai",
-    "state": "Maharashtra",
-    "country": "India",
-    "bio": "Passionate about co-living spaces."
-  }
-  ```
-- **Response**: Updated User Profile JSON. Re-calculates profile completion parameters on-the-fly.
-
-#### 3. Upload Profile Image
-- **Endpoint**: `POST /api/user/profile/image`
-- **Content-Type**: `multipart/form-data`
-- **Form Data Parameter**: `file` (Image file)
-- **Response**: Relative image URL (e.g. `/uploads/319e7-49f3-...png`). Saves the file inside the local `./uploads` directory.
-
-#### 4. Delete Profile Image
-- **Endpoint**: `DELETE /api/user/profile/image`
-- **Response**: `204 No Content`. Removes the physical local image file and updates the profile link to `null`.
-
----
-
-## 💻 Local Development Setup
-
-### Prerequisites
-- JDK 25 installed.
-- MongoDB running locally (default port `27017`).
-
-### Steps
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/adix2326/stayo-be.git
-   cd stayo-be
-   ```
-
-2. **Configure Environment Variables**:
-   Set credentials in your environment:
-   ```powershell
-   $env:TWILIO_ACCOUNT_SID="ACxxxx"
-   $env:TWILIO_AUTH_TOKEN="xxxx"
-   $env:TWILIO_MOBILE_NUMBER="+1510xxxx"
-   $env:OTP_USE_STATIC="false"  # Set to true to test without sending real SMS
-   ```
-
-3. **Run the application**:
-   ```powershell
-   $env:JAVA_HOME="C:\Program Files\Java\jdk-25.0.3"
-   .\mvnw spring-boot:run
-   ```
-
-4. **Verify Swagger APIs**:
-   Open [http://localhost:8081/swagger-ui/index.html](http://localhost:8081/swagger-ui/index.html) in your browser.
-   - **Bearer Authentication**: The Swagger UI is equipped with JWT Bearer Token authorization. Click the **"Authorize"** button at the top and paste your JWT token to test the protected `/api/user/profile/**` endpoints directly from the browser interface.
-
-5. **Run the Test Suite**:
-   ```powershell
-   $env:JAVA_HOME="C:\Program Files\Java\jdk-25.0.3"
-   .\mvnw test
-   ```
-
----
-
-## 🌐 Production Deployment (Render)
-
-When deployed to Render, the backend and its developer tools can be accessed publicly:
-- **Base API URL**: `https://stayo-be.onrender.com`
-- **Deployed Swagger UI**: [https://stayo-be.onrender.com/swagger-ui/index.html](https://stayo-be.onrender.com/swagger-ui/index.html)
-- **Deployed OpenAPI Docs JSON**: `https://stayo-be.onrender.com/v3/api-docs`
-
-*Note: The Swagger UI on Render automatically routes all preflight and action requests through secure HTTPS to match the server environment.*
+- [`AI_BE_CONTEXT.md`](AI_BE_CONTEXT.md) — source of truth for the backend (read first)
+- [`docs/`](docs/README.md) — architecture, modules, API, database, guidelines, roadmap
+- [`PRD/`](PRD/) — product requirements and frontend screen planning
