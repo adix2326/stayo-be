@@ -16,6 +16,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
 import java.util.Optional;
@@ -46,10 +47,12 @@ class AuthServiceTest {
     private AuthService authService;
 
     private static final String MOBILE = "+919876543210";
+    private static final String SUPER_ADMIN_MOBILE = "+910000000001";
 
     @BeforeEach
     void setUp() {
         authService = new AuthService(userRepository, jwtProvider, otpService, blacklistedTokenRepository);
+        ReflectionTestUtils.setField(authService, "superAdminMobileNumber", SUPER_ADMIN_MOBILE);
         when(jwtProvider.generateTokenWithClaims(any(), any(), any(), any())).thenReturn("token123");
     }
 
@@ -158,6 +161,47 @@ class AuthServiceTest {
             verify(userRepository).save(captor.capture());
             assertEquals(List.of(Role.USER), captor.getValue().getRoles());
         }
+    }
+
+    @Nested
+    @DisplayName("super admin grant")
+    class SuperAdminTests {
+
+        @Test
+        @DisplayName("Configured super-admin number gets SUPER_ADMIN on signup and on every later login, never duplicated")
+        void superAdminNumber_grantedOnSignupAndLogin_idempotent() {
+            when(userRepository.findByMobileNumber(SUPER_ADMIN_MOBILE)).thenReturn(Optional.empty());
+            when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            AuthResponse signup = authService.verifyOtpAndSignup(requestFor(SUPER_ADMIN_MOBILE));
+            assertTrue(signup.getRoles().contains("SUPER_ADMIN"));
+
+            User existing = User.builder().id("a1").mobileNumber(SUPER_ADMIN_MOBILE)
+                    .roles(new java.util.ArrayList<>(List.of(Role.USER, Role.SUPER_ADMIN))).build();
+            when(userRepository.findByMobileNumber(SUPER_ADMIN_MOBILE)).thenReturn(Optional.of(existing));
+
+            authService.verifyOtpAndSignup(requestFor(SUPER_ADMIN_MOBILE));
+            assertEquals(1, existing.getRoles().stream().filter(r -> r == Role.SUPER_ADMIN).count());
+        }
+
+        @Test
+        @DisplayName("Existing non-super-admin account gains SUPER_ADMIN only when its number matches; others never do")
+        void otherNumber_neverGrantedSuperAdmin() {
+            User existing = User.builder().id("u9").mobileNumber(MOBILE)
+                    .roles(new java.util.ArrayList<>(List.of(Role.USER))).build();
+            when(userRepository.findByMobileNumber(MOBILE)).thenReturn(Optional.of(existing));
+            when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            authService.verifyOtpAndSignup(request(false));
+
+            assertFalse(existing.getRoles().contains(Role.SUPER_ADMIN));
+        }
+    }
+
+    private OtpVerifyRequestDto requestFor(String mobile) {
+        OtpVerifyRequestDto dto = request(false);
+        dto.setMobileNumber(mobile);
+        return dto;
     }
 
     private OtpVerifyRequestDto request(boolean viaOwnerOnboarding) {

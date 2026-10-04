@@ -58,7 +58,7 @@ public class User {
     // explicitly (see AuthService). This just guards against an empty list
     // ever reaching a role check.
     public void ensureRolesInitialized() {
-        if (!getRoles().contains(Role.USER)) {
+        if (getRoles().isEmpty()) {
             roles.add(Role.USER);
         }
     }
