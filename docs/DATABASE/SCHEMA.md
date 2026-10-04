@@ -20,8 +20,8 @@ The following represents the core schema structures mapping to MongoDB documents
   "state": "Maharashtra",
   "country": "India",
   "bio": "Looking for a quiet place.",
-  "profileImage": "/uploads/uuid.jpg",
-  "role": "USER",
+  "profileImage": "https://res.cloudinary.com/.../image.jpg",
+  "roles": ["USER"],  // USER, PG_OWNER, ADMIN, SUPER_ADMIN (any combination)
   "phoneVerified": true,
   "profileCompleted": true,
   "wishlistPropertyIds": ["pgId1", "pgId2"], // Note: Embedded array

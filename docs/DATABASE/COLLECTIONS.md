@@ -30,3 +30,12 @@ Based on the roadmap and module separation guidelines, the following collections
 - **`notifications`**: To persist in-app alerts.
 - **`bookings`**: To track transaction flows.
 - **`reviews`**: To store user ratings for PGs.
+
+## Update: Collections Added Since This Page Was Written
+Wishlist remains embedded in `users`. The following now exist (see `AI_BE_CONTEXT.md` §8 for fields):
+- **`bookings`** — booking requests; partial unique index `(userId, pgId)` for active statuses.
+- **`owner_profiles`** — owner business/bank details and verification status (`PENDING`/`VERIFIED`/`REJECTED`).
+- **PG reviews** (`review/entity/PGReview`) — one review per user/PG/booking.
+- **Documents** (`document/entity/Document`) — generic verification document records.
+- **Images** (`property/entity/PGImages`) — PG image records.
+Still future: persisted `notifications`.

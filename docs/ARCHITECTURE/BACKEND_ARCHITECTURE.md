@@ -11,7 +11,7 @@ The application uses **MongoDB** as its primary datastore and heavily relies on 
 - **Database**: MongoDB
 - **Security**: Spring Security + JWT (`jjwt` 0.12.3)
 - **API Docs**: Swagger / OpenAPI (`springdoc-openapi` 2.8.5)
-- **External Services**: Twilio (for SMS OTP)
+- **External Services**: Twilio (SMS OTP), Cloudinary (file storage)
 - **Build Tool**: Maven
 - **Utilities**: Lombok (boilerplate reduction), Commons-Codec
 
@@ -33,7 +33,13 @@ The application is structured by feature rather than layer.
 
 ```text
 com.stayo.stayo
+├── admin/         # Admin panel API: owner review queue, admin management
 ├── auth/          # Authentication, OTP, JWT generation
+├── booking/       # Booking requests, owner accept/reject/confirm-payment
+├── document/      # Verification document records
+├── owner/         # Owner onboarding, verification, dashboard
+├── review/        # PG reviews
+├── storage/       # Cloudinary file storage abstraction
 ├── common/        # Shared DTOs, Exceptions, global configurations
 ├── config/        # Security, Swagger, CORS, Mongo configs
 ├── content/       # Static content, Banners, Categories

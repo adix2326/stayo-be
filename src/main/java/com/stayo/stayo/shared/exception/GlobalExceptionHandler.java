@@ -1,5 +1,6 @@
 package com.stayo.stayo.shared.exception;
 
+import com.stayo.stayo.admin.exception.SuperAdminAccessRequiredException;
 import com.stayo.stayo.booking.exception.InvalidBookingRequestException;
 import com.stayo.stayo.booking.exception.InvalidBookingStateException;
 import com.stayo.stayo.owner.exception.InvalidVerificationRequestException;
@@ -19,8 +20,12 @@ import com.stayo.stayo.booking.exception.DuplicateBookingException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.ErrorResponse;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -29,6 +34,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.stream.Collectors;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -92,11 +98,35 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(body);
     }
 
-    // Fallback for unexpected exceptions (optional)
+    // Fallback for unexpected exceptions. Spring's own web exceptions (unknown path 404,
+    // wrong method 405, wrong content type 415, missing param/part 400, ...) implement
+    // ErrorResponse and already carry the right status, so honour it instead of a 500.
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleGeneric(Exception ex, HttpServletRequest req) {
-        ApiError body = new ApiError(HttpStatus.INTERNAL_SERVER_ERROR.value(), "Internal Server Error", ex.getMessage(), req.getRequestURI());
+        if (ex instanceof ErrorResponse errorResponse) {
+            HttpStatus status = HttpStatus.valueOf(errorResponse.getStatusCode().value());
+            ApiError body = new ApiError(status.value(), status.getReasonPhrase(), errorResponse.getBody().getDetail(), req.getRequestURI());
+            return ResponseEntity.status(status).headers(errorResponse.getHeaders()).body(body);
+        }
+        log.error("Unhandled exception on {} {}", req.getMethod(), req.getRequestURI(), ex);
+        ApiError body = new ApiError(HttpStatus.INTERNAL_SERVER_ERROR.value(), "Internal Server Error",
+                "Something went wrong. Please try again later.", req.getRequestURI());
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiError> handleMaxUploadSize(MaxUploadSizeExceededException ex, HttpServletRequest req) {
+        ApiError body = new ApiError(HttpStatus.PAYLOAD_TOO_LARGE.value(), "File Too Large", "Uploaded file exceeds the 8MB limit", req.getRequestURI());
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(body);
+    }
+
+    // Database down/unreachable/timeouts are an availability problem, not a server bug.
+    @ExceptionHandler(DataAccessException.class)
+    public ResponseEntity<ApiError> handleDataAccess(DataAccessException ex, HttpServletRequest req) {
+        log.error("Database error on {} {}", req.getMethod(), req.getRequestURI(), ex);
+        ApiError body = new ApiError(HttpStatus.SERVICE_UNAVAILABLE.value(), "Service Unavailable",
+                "Service temporarily unavailable. Please try again shortly.", req.getRequestURI());
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(body);
     }
 
     // Handle @Valid method argument validation failures (request body)
@@ -188,6 +218,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AdminAccessRequiredException.class)
     public ResponseEntity<ApiError> handleAdminAccessRequired(AdminAccessRequiredException ex, HttpServletRequest req) {
         ApiError body = new ApiError(HttpStatus.FORBIDDEN.value(), "Admin Access Required", ex.getMessage(), req.getRequestURI());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
+    }
+
+    @ExceptionHandler(SuperAdminAccessRequiredException.class)
+    public ResponseEntity<ApiError> handleSuperAdminAccessRequired(SuperAdminAccessRequiredException ex, HttpServletRequest req) {
+        ApiError body = new ApiError(HttpStatus.FORBIDDEN.value(), "Super Admin Access Required", ex.getMessage(), req.getRequestURI());
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
     }
 

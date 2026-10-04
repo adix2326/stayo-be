@@ -5,8 +5,11 @@ import com.stayo.stayo.document.enums.DocType;
 import com.stayo.stayo.owner.dto.OwnerOnboardingRequestDTO;
 import com.stayo.stayo.owner.dto.OwnerProfileResponseDTO;
 import com.stayo.stayo.owner.dto.OwnerVerificationRequestDTO;
+import com.stayo.stayo.owner.enums.VerificationStatus;
 
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 public interface OwnerProfileService {
 
@@ -24,6 +27,12 @@ public interface OwnerProfileService {
      * authorization gate for the endpoint. See docs/GUIDELINES/OWNER_PORTAL_ROADMAP.md Phase 7.
      */
     OwnerProfileResponseDTO verifyOwnerProfile(String callerId, String targetUserId, OwnerVerificationRequestDTO request);
+
+    /**
+     * List all owner profiles with the given verification status, for admin review.
+     * Requires the caller to hold Role.ADMIN or Role.SUPER_ADMIN.
+     */
+    List<OwnerProfileResponseDTO> listByStatus(String callerId, VerificationStatus status);
 
     /**
      * Whether this user has a verification-APPROVED owner profile.

@@ -16,6 +16,7 @@ import com.stayo.stayo.user.repository.UserRepository;
 
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
 
@@ -31,6 +32,19 @@ public class AuthService {
     private final JwtProvider jwtProvider;
     private final OtpService otpService;
     private final BlacklistedTokenRepository blacklistedTokenRepository;
+
+    @Value("${app.super-admin.mobile-number}")
+    private String superAdminMobileNumber;
+
+    // The single hardcoded super admin number is granted Role.SUPER_ADMIN on
+    // every login (new or existing account) instead of via manual DB edit —
+    // see docs/GUIDELINES/ROADMAP.md "Admin Panel". Idempotent: safe to call
+    // on every login.
+    private void ensureSuperAdminRole(User user) {
+        if (superAdminMobileNumber.equals(user.getMobileNumber()) && !user.getRoles().contains(Role.SUPER_ADMIN)) {
+            user.getRoles().add(Role.SUPER_ADMIN);
+        }
+    }
 
     // The role-picker (/choose-role on the frontend) is offered whenever an
     // account holds PG_OWNER — not only when it literally holds more than
@@ -68,6 +82,7 @@ public class AuthService {
         if (existingUser != null) {
             // User already registered, treat as signin
             existingUser.ensureRolesInitialized();
+            ensureSuperAdminRole(existingUser);
             existingUser.setUpdatedAt(LocalDateTime.now());
             existingUser.setLastLogin(LocalDateTime.now());
             userRepository.save(existingUser);
@@ -106,6 +121,7 @@ public class AuthService {
                 .lastLogin(LocalDateTime.now())
                 .build();
 
+        ensureSuperAdminRole(newUser);
         userRepository.save(newUser);
         log.info("New user created via OTP signup: {} (initial role: {})", request.getMobileNumber(), initialRole);
 
