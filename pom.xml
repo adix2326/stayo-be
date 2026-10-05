@@ -125,6 +125,21 @@
 
     <build>
         <plugins>
+            <!-- Dummy secrets so tests start on a fresh clone/CI without application-local.properties.
+                 MONGODB_URI is intentionally not set here: provide it via env or application-local.properties. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <environmentVariables>
+                        <JWT_SECRET>test-only-jwt-secret-test-only-jwt-secret-test-only-jwt-secret-0123456789</JWT_SECRET>
+                        <CLOUDINARY_CLOUD_NAME>test</CLOUDINARY_CLOUD_NAME>
+                        <CLOUDINARY_API_KEY>test</CLOUDINARY_API_KEY>
+                        <CLOUDINARY_API_SECRET>test</CLOUDINARY_API_SECRET>
+                        <SUPER_ADMIN_MOBILE_NUMBER>+910000000001</SUPER_ADMIN_MOBILE_NUMBER>
+                    </environmentVariables>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>

@@ -4,6 +4,7 @@ import com.stayo.stayo.shared.enums.Gender;
 
 import lombok.*;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDate;
@@ -21,7 +22,11 @@ public class User {
 
     // basic info
     private String name;
+
+    @Indexed
     private String email;
+
+    @Indexed(unique = true)
     private String mobileNumber;
 
     // personal info
@@ -34,6 +39,7 @@ public class User {
     private String company;
 
     // Address
+    @Indexed
     private String city;
     private String state;
     private String country;

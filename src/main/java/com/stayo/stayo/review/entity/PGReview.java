@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 
 @Document(collection = "pg_reviews")
 @CompoundIndex(name = "unique_review_per_booking", def = "{'userId': 1, 'pgId': 1, 'bookingId': 1}", unique = true)
+@CompoundIndex(name = "pg_created_idx", def = "{ 'pgId': 1, 'createdAt':-1 }")
 @Data
 @Builder
 @NoArgsConstructor

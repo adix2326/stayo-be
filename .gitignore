@@ -31,3 +31,6 @@ target/
 *.env
 
 src/main/resources/application-dev.properties
+
+# Local secrets/overrides (see application-local.properties.example)
+application-local.properties

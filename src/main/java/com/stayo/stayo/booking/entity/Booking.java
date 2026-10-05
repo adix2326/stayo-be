@@ -46,6 +46,8 @@ public class Booking {
     private String pgName;
     private String pgLocality;
     private String pgCity;
+
+    @Indexed
     private String pgOwnerId;    // Denormalized from PG for owner notification
 
     private RoomType roomType;
