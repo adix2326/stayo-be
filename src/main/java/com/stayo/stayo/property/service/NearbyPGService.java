@@ -1,5 +1,6 @@
 package com.stayo.stayo.property.service;
 
+import java.util.regex.Pattern;
 import com.stayo.stayo.property.entity.PG;
 
 import lombok.RequiredArgsConstructor;
@@ -22,7 +23,7 @@ public class NearbyPGService {
         
         Query query = new Query();
         if (city != null) {
-            query.addCriteria(Criteria.where("city").regex("^" + city.trim() + "$", "i"));
+            query.addCriteria(Criteria.where("city").regex("^" + Pattern.quote(city.trim()) + "$", "i"));
         }
         query.addCriteria(Criteria.where("isActive").is(true));
         query.limit(10);

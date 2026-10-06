@@ -9,6 +9,6 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 import java.util.Optional;
 
 public interface OtpRepository extends MongoRepository<OtpRequest, String> {
-    Optional<OtpRequest> findByMobileNumberAndVerifiedFalse(String mobileNumber);
-    void deleteByMobileNumberAndVerifiedFalse(String mobileNumber);
+    Optional<OtpRequest> findByMobileNumber(String mobileNumber);
+    void deleteByMobileNumber(String mobileNumber);
 }

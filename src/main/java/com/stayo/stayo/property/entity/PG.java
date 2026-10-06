@@ -50,7 +50,6 @@ public class PG {
 
     private Integer reviewCount; // total reviews
 
-    @Indexed
     private Boolean isFeatured;
 
     @Indexed

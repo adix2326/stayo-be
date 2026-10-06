@@ -18,6 +18,12 @@ public class AuthUtil {
     private final JwtProvider jwtProvider;
     private final BlacklistedTokenRepository blacklistedTokenRepository;
 
+    /** "Bearer abc" or bare "abc" → "abc". */
+    public static String stripBearer(String header) {
+        String t = header.trim();
+        return t.startsWith("Bearer ") ? t.substring(7).trim() : t;
+    }
+
     /**
      * Extract userId from Authorization header with validation
      * @param token Authorization header value
@@ -26,14 +32,11 @@ public class AuthUtil {
      * @throws InvalidTokenException if token is invalid, expired or blacklisted
      */
     public String extractUserIdFromToken(String token){
-        if(token == null || token.trim().isEmpty()){
+        if(token == null || token.isBlank()){
             throw new MissingAuthorizationException("Authorization header is required");
         }
 
-        String jwtToken = token;
-        if(token.startsWith("Bearer ")){
-            jwtToken = token.substring(7).trim();
-        }
+        String jwtToken = stripBearer(token);
 
         if(blacklistedTokenRepository.existsByToken(jwtToken)){
             throw new InvalidTokenException("Token already invalidated");

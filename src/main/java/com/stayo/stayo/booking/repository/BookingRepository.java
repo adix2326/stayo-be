@@ -40,4 +40,13 @@ public interface BookingRepository extends MongoRepository<Booking, String> {
 
     Optional<Booking> findByIdAndPgOwnerId(String bookingId, String pgOwnerId);
 
+    /** Only the fields the owner dashboard sums over, for the given statuses. */
+    List<RevenueView> findProjectedByPgOwnerIdAndStatusIn(String pgOwnerId, java.util.Collection<BookingStatus> statuses);
+
+    interface RevenueView {
+        BookingStatus getStatus();
+        Double getMonthlyRent();
+        java.time.LocalDateTime getCreatedAt();
+    }
+
 }

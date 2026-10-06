@@ -38,6 +38,7 @@ import com.stayo.stayo.user.repository.UserRepository;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.regex.Pattern;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -134,21 +135,7 @@ public class PGServiceImpl implements PGService {
         boolean sortsByPrice = "price_asc".equals(request.getSortBy()) || "price_desc".equals(request.getSortBy());
         boolean needsMinRent = hasPriceFilter || sortsByPrice;
 
-        // 1. Count matching entries (before pagination) — a separate aggregation,
-        // same shape as the old mongoTemplate.count(query, ...) call.
-        List<AggregationOperation> countOps = new ArrayList<>();
-        countOps.add(Aggregation.match(matchCriteria));
-        if (hasPriceFilter) {
-            countOps.add(addMinRentField());
-            countOps.add(Aggregation.match(priceCriteria(request)));
-        }
-        countOps.add(Aggregation.count().as("total"));
-        AggregationResults<Document> countResult = mongoTemplate.aggregate(
-                Aggregation.newAggregation(countOps), "properties", Document.class);
-        Document countDoc = countResult.getUniqueMappedResult();
-        long totalElements = countDoc != null ? ((Number) countDoc.get("total")).longValue() : 0;
-
-        // 2. Fetch the paginated, sorted page.
+        // 1. Fetch the paginated, sorted page.
         int page = (request.getPageNumber() != null) ? request.getPageNumber() : 0;
         int size = (request.getSize() != null) ? request.getSize() : 10;
         if (size > 50) size = 50; // Security constraint: prevent huge data scraping requests
@@ -168,6 +155,24 @@ public class PGServiceImpl implements PGService {
         AggregationResults<PG> dataResult = mongoTemplate.aggregate(
                 Aggregation.newAggregation(dataOps), "properties", PG.class);
         List<PG> properties = dataResult.getMappedResults();
+
+        // 2. Total matches. A short first page already is the total — skip the
+        // second scan; only count when more rows may exist beyond this page.
+        long totalElements;
+        if (page == 0 && properties.size() < size) {
+            totalElements = properties.size();
+        } else {
+            List<AggregationOperation> countOps = new ArrayList<>();
+            countOps.add(Aggregation.match(matchCriteria));
+            if (hasPriceFilter) {
+                countOps.add(addMinRentField());
+                countOps.add(Aggregation.match(priceCriteria(request)));
+            }
+            countOps.add(Aggregation.count().as("total"));
+            Document countDoc = mongoTemplate.aggregate(
+                    Aggregation.newAggregation(countOps), "properties", Document.class).getUniqueMappedResult();
+            totalElements = countDoc != null ? ((Number) countDoc.get("total")).longValue() : 0;
+        }
 
         List<String> wishlistedIds = null;
         if (userId != null && !userId.trim().isEmpty()) {
@@ -209,7 +214,7 @@ public class PGServiceImpl implements PGService {
 
         // universal search: matches pgName, locality, city, description, address, OR amenities (case-insensitive)
         if (request.getSearchString() != null && !request.getSearchString().trim().isEmpty()) {
-            String regex = request.getSearchString().trim();
+            String regex = Pattern.quote(request.getSearchString().trim());
             criteriaList.add(new Criteria().orOperator(
                     Criteria.where("pgName").regex(regex, "i"),
                     Criteria.where("locality").regex(regex, "i"),
@@ -221,10 +226,10 @@ public class PGServiceImpl implements PGService {
         }
 
         if (request.getCity() != null && !request.getCity().trim().isEmpty()) {
-            criteriaList.add(Criteria.where("city").regex("^" + request.getCity().trim() + "$", "i"));
+            criteriaList.add(Criteria.where("city").regex("^" + Pattern.quote(request.getCity().trim()) + "$", "i"));
         }
         if (request.getLocality() != null && !request.getLocality().trim().isEmpty()) {
-            criteriaList.add(Criteria.where("locality").regex("^" + request.getLocality().trim() + "$", "i"));
+            criteriaList.add(Criteria.where("locality").regex("^" + Pattern.quote(request.getLocality().trim()) + "$", "i"));
         }
         if (request.getGender() != null) {
             criteriaList.add(Criteria.where("genderCategory").is(request.getGender()));
