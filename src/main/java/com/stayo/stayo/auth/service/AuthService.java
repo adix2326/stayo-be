@@ -5,6 +5,7 @@ import com.stayo.stayo.auth.dto.OtpVerifyRequestDto;
 import com.stayo.stayo.auth.entity.BlacklistedToken;
 import com.stayo.stayo.auth.repository.BlacklistedTokenRepository;
 import com.stayo.stayo.auth.security.JwtProvider;
+import com.stayo.stayo.auth.util.AuthUtil;
 import com.stayo.stayo.shared.exception.InvalidMobileNumberException;
 import com.stayo.stayo.shared.exception.InvalidTokenException;
 import com.stayo.stayo.shared.exception.UserNotFoundException;
@@ -12,16 +13,15 @@ import com.stayo.stayo.user.dto.UpdateUserDto;
 import com.stayo.stayo.user.entity.Role;
 import com.stayo.stayo.user.entity.User;
 import com.stayo.stayo.user.repository.UserRepository;
-
-
-
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
 
 import java.time.LocalDateTime;
-import java.util.Date;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -58,8 +58,8 @@ public class AuthService {
         return user.getRoles().contains(Role.PG_OWNER);
     }
 
-    private java.util.List<String> roleNames(User user) {
-        return user.getRoles().stream().map(Enum::name).collect(java.util.stream.Collectors.toList());
+    private List<String> roleNames(User user) {
+        return user.getRoles().stream().map(Enum::name).collect(Collectors.toList());
     }
 
 
@@ -76,68 +76,46 @@ public class AuthService {
     public AuthResponse verifyOtpAndSignup(OtpVerifyRequestDto request) {
         otpService.verifyOtp(request.getMobileNumber(), request.getOtp());
 
-        // Check if user already exists
-        User existingUser = userRepository.findByMobileNumber(request.getMobileNumber()).orElse(null);
+        LocalDateTime now = LocalDateTime.now();
+        User user = userRepository.findByMobileNumber(request.getMobileNumber()).orElse(null);
 
-        if (existingUser != null) {
-            // User already registered, treat as signin
-            existingUser.ensureRolesInitialized();
-            ensureSuperAdminRole(existingUser);
-            existingUser.setUpdatedAt(LocalDateTime.now());
-            existingUser.setLastLogin(LocalDateTime.now());
-            userRepository.save(existingUser);
-            log.info("User signed in: {}", request.getMobileNumber());
-
-            String accessToken = jwtProvider.generateTokenWithClaims(
-                    existingUser.getId(),
-                    existingUser.getName(),
-                    existingUser.getEmail(),
-                    existingUser.getMobileNumber()
-            );
-
-            return AuthResponse.builder()
-                    .accessToken(accessToken)
-                    .userId(existingUser.getId())
-                    .mobileNumber(existingUser.getMobileNumber())
-                    .name(existingUser.getName())
-                    .email(existingUser.getEmail())
-                    .roles(roleNames(existingUser))
-                    .dualRoleAvailable(canChooseRole(existingUser))
+        if (user == null) {
+            // Initial role matches the entry point: "Become an Owner" starts as
+            // PG_OWNER only, not PG_OWNER+USER — no tenant activity yet.
+            Role initialRole = request.isViaOwnerOnboarding() ? Role.PG_OWNER : Role.USER;
+            user = User.builder()
+                    .mobileNumber(request.getMobileNumber())
+                    .phoneVerified(true)
+                    .profileCompleted(false) // until name/email added
+                    .roles(new ArrayList<>(List.of(initialRole)))
+                    .createdAt(now)
                     .build();
+            log.info("New user created via OTP signup: {} (initial role: {})", request.getMobileNumber(), initialRole);
+        } else {
+            user.ensureRolesInitialized();
+            log.info("User signed in: {}", request.getMobileNumber());
         }
 
-        // Create new user — only has mobileNumber at this point. The initial
-        // role matches whichever entry point triggered this signup: someone
-        // signing up via "Become an Owner" starts as PG_OWNER only, not
-        // PG_OWNER+USER — they haven't done anything as a tenant yet.
-        Role initialRole = request.isViaOwnerOnboarding() ? Role.PG_OWNER : Role.USER;
-        User newUser = User.builder()
-                .mobileNumber(request.getMobileNumber())
-                .phoneVerified(true)
-                .profileCompleted(false) //Not completed until name/email added
-                .roles(new java.util.ArrayList<>(java.util.List.of(initialRole)))
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
-                .lastLogin(LocalDateTime.now())
-                .build();
+        ensureSuperAdminRole(user);
+        user.setUpdatedAt(now);
+        user.setLastLogin(now);
+        userRepository.save(user);
 
-        ensureSuperAdminRole(newUser);
-        userRepository.save(newUser);
-        log.info("New user created via OTP signup: {} (initial role: {})", request.getMobileNumber(), initialRole);
+        return toResponse(user);
+    }
 
+    private AuthResponse toResponse(User user) {
         String accessToken = jwtProvider.generateTokenWithClaims(
-                newUser.getId(),
-                null,
-                null,
-                newUser.getMobileNumber()
-        );
+                user.getId(), user.getName(), user.getEmail(), user.getMobileNumber());
 
         return AuthResponse.builder()
                 .accessToken(accessToken)
-                .userId(newUser.getId())
-                .mobileNumber(newUser.getMobileNumber())
-                .roles(roleNames(newUser))
-                .dualRoleAvailable(canChooseRole(newUser))
+                .userId(user.getId())
+                .mobileNumber(user.getMobileNumber())
+                .name(user.getName())
+                .email(user.getEmail())
+                .roles(roleNames(user))
+                .dualRoleAvailable(canChooseRole(user))
                 .build();
     }
 
@@ -193,47 +171,27 @@ public class AuthService {
         userRepository.save(user);
         log.info("User details updated: {}", userId);
 
-        // Now token includes name and email
-        String accessToken = jwtProvider.generateTokenWithClaims(
-                user.getId(),
-                user.getName(),
-                user.getEmail(),
-                user.getMobileNumber()
-        );
-
-        return AuthResponse.builder()
-                .accessToken(accessToken)
-                .userId(user.getId())
-                .mobileNumber(user.getMobileNumber())
-                .name(user.getName())
-                .email(user.getEmail())
-                .roles(roleNames(user))
-                .dualRoleAvailable(canChooseRole(user))
-                .build();
+        // Reissue so the token carries the new name/email
+        return toResponse(user);
     }
 
     public void logout(String token) {
-        if (token == null || token.trim().isEmpty()) {
+        if (token == null || token.isBlank()) {
             throw new InvalidTokenException("Invalid JWT");
         }
 
-        String jwtToken = token;
-        if (token.startsWith("Bearer ")) {
-            jwtToken = token.substring(7).trim();
-        }
+        String jwtToken = AuthUtil.stripBearer(token);
 
         if (blacklistedTokenRepository.existsByToken(jwtToken)) {
             throw new InvalidTokenException("Token already invalidated");
         }
 
         try {
-            Date expiration = jwtProvider.extractExpiration(jwtToken);
-            BlacklistedToken blacklistedToken = BlacklistedToken.builder()
+            blacklistedTokenRepository.save(BlacklistedToken.builder()
                     .token(jwtToken)
-                    .expiryDate(expiration.toInstant())
-                    .build();
-            blacklistedTokenRepository.save(blacklistedToken);
-            log.info("Token successfully blacklisted: {}", jwtToken);
+                    .expiryDate(jwtProvider.extractExpiration(jwtToken).toInstant())
+                    .build());
+            log.info("Token blacklisted");
         } catch (RuntimeException e) {
             log.error("Failed to blacklist token during logout: {}", e.getMessage());
             throw new InvalidTokenException("Invalid JWT");

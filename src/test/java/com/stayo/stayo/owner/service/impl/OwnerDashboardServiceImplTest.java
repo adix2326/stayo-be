@@ -1,10 +1,8 @@
 package com.stayo.stayo.owner.service.impl;
 
-import com.stayo.stayo.booking.entity.Booking;
 import com.stayo.stayo.booking.enums.BookingStatus;
 import com.stayo.stayo.booking.repository.BookingRepository;
 import com.stayo.stayo.owner.dto.OwnerDashboardResponseDTO;
-import com.stayo.stayo.property.entity.PG;
 import com.stayo.stayo.property.repository.PGRepository;
 import com.stayo.stayo.property.repository.PGViewRepository;
 
@@ -22,6 +20,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -35,33 +34,34 @@ class OwnerDashboardServiceImplTest {
 
     private static final String OWNER_ID = "owner123";
 
-    private PG pg(String id, boolean active) {
-        return PG.builder().id(id).ownerId(OWNER_ID).isActive(active).build();
+    private PGRepository.ActivityView pg(String id, boolean active) {
+        return new PGRepository.ActivityView() {
+            public String getId() { return id; }
+            public Boolean getIsActive() { return active; }
+        };
     }
 
-    private Booking booking(BookingStatus status, Double monthlyRent, LocalDateTime createdAt) {
-        return Booking.builder()
-                .pgOwnerId(OWNER_ID)
-                .status(status)
-                .monthlyRent(monthlyRent)
-                .createdAt(createdAt)
-                .build();
+    private BookingRepository.RevenueView booking(BookingStatus status, Double monthlyRent, LocalDateTime createdAt) {
+        return new BookingRepository.RevenueView() {
+            public BookingStatus getStatus() { return status; }
+            public Double getMonthlyRent() { return monthlyRent; }
+            public LocalDateTime getCreatedAt() { return createdAt; }
+        };
     }
 
     @BeforeEach
     void setUp() {
-        when(pgRepository.findByOwnerId(OWNER_ID)).thenReturn(List.of(pg("pg1", true), pg("pg2", false)));
+        when(pgRepository.findProjectedByOwnerId(OWNER_ID)).thenReturn(List.of(pg("pg1", true), pg("pg2", false)));
     }
 
     @Test
     void getDashboard_aggregatesCorrectly() {
         when(pgViewRepository.countByPropertyIdInAndViewedAtBetween(anyList(), any(), any())).thenReturn(4L);
         LocalDateTime now = LocalDateTime.now();
-        when(bookingRepository.findByPgOwnerIdOrderByCreatedAtDesc(OWNER_ID)).thenReturn(List.of(
+        when(bookingRepository.findProjectedByPgOwnerIdAndStatusIn(eq(OWNER_ID), any())).thenReturn(List.of(
                 booking(BookingStatus.OWNER_ACCEPTED, 8000.0, now),
                 booking(BookingStatus.OWNER_ACCEPTED, 7000.0, now.minusMonths(1)),
-                booking(BookingStatus.PENDING_OWNER, 9000.0, now),
-                booking(BookingStatus.OWNER_REJECTED, 6000.0, now)
+                booking(BookingStatus.PENDING_OWNER, 9000.0, now)
         ));
 
         OwnerDashboardResponseDTO response = ownerDashboardService.getDashboard(OWNER_ID);
@@ -82,8 +82,8 @@ class OwnerDashboardServiceImplTest {
 
     @Test
     void getDashboard_noBookingsOrProperties_returnsZeroedStats() {
-        when(pgRepository.findByOwnerId(OWNER_ID)).thenReturn(List.of());
-        when(bookingRepository.findByPgOwnerIdOrderByCreatedAtDesc(OWNER_ID)).thenReturn(List.of());
+        when(pgRepository.findProjectedByOwnerId(OWNER_ID)).thenReturn(List.of());
+        when(bookingRepository.findProjectedByPgOwnerIdAndStatusIn(eq(OWNER_ID), any())).thenReturn(List.of());
 
         OwnerDashboardResponseDTO response = ownerDashboardService.getDashboard(OWNER_ID);
 

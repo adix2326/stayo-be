@@ -11,7 +11,6 @@ import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.index.CompoundIndexes;
-import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDate;
@@ -25,7 +24,9 @@ import java.util.List;
 @Document(collection = "bookings")
 @CompoundIndexes({
         @CompoundIndex(name = "user_status_created_idx", def = "{'userId': 1, 'status': 1, 'createdAt': -1}"),
-        @CompoundIndex(name = "pg_status_idx", def = "{'pgId': 1, 'status': 1}")
+        @CompoundIndex(name = "pg_status_idx", def = "{'pgId': 1, 'status': 1}"),
+        @CompoundIndex(name = "owner_created_idx", def = "{'pgOwnerId': 1, 'createdAt': -1}"),
+        @CompoundIndex(name = "owner_status_created_idx", def = "{'pgOwnerId': 1, 'status': 1, 'createdAt': -1}")
 })
 @Data
 @Builder
@@ -36,10 +37,8 @@ public class Booking {
     @Id
     private String id;
 
-    @Indexed
     private String userId;       // Reference to users collection
 
-    @Indexed
     private String pgId;         // Reference to properties collection
 
     // Denormalized PG fields for display — avoids expensive joins on listing
@@ -47,7 +46,6 @@ public class Booking {
     private String pgLocality;
     private String pgCity;
 
-    @Indexed
     private String pgOwnerId;    // Denormalized from PG for owner notification
 
     private RoomType roomType;
@@ -71,7 +69,6 @@ public class Booking {
     private Double securityDeposit;
     private Double totalPayable;
 
-    @Indexed
     private BookingStatus status;
 
     // Groundwork for the future payments module — nothing sets these yet

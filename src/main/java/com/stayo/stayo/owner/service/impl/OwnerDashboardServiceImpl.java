@@ -1,12 +1,10 @@
 package com.stayo.stayo.owner.service.impl;
 
-import com.stayo.stayo.booking.entity.Booking;
 import com.stayo.stayo.booking.enums.BookingStatus;
 import com.stayo.stayo.booking.repository.BookingRepository;
 import com.stayo.stayo.owner.dto.MonthlyRevenuePointDTO;
 import com.stayo.stayo.owner.dto.OwnerDashboardResponseDTO;
 import com.stayo.stayo.owner.service.OwnerDashboardService;
-import com.stayo.stayo.property.entity.PG;
 import com.stayo.stayo.property.repository.PGRepository;
 import com.stayo.stayo.property.repository.PGViewRepository;
 
@@ -39,37 +37,37 @@ public class OwnerDashboardServiceImpl implements OwnerDashboardService {
     public OwnerDashboardResponseDTO getDashboard(String ownerId) {
         log.info("Loading owner dashboard for owner: {}", ownerId);
 
-        CompletableFuture<List<PG>> propertiesFuture = CompletableFuture.supplyAsync(
-                () -> pgRepository.findByOwnerId(ownerId)
+        CompletableFuture<List<PGRepository.ActivityView>> propertiesFuture = CompletableFuture.supplyAsync(
+                () -> pgRepository.findProjectedByOwnerId(ownerId)
         );
-        CompletableFuture<List<Booking>> bookingsFuture = CompletableFuture.supplyAsync(
-                () -> bookingRepository.findByPgOwnerIdOrderByCreatedAtDesc(ownerId)
+        // Rejected/cancelled bookings never feed any stat, so don't load them.
+        CompletableFuture<List<BookingRepository.RevenueView>> bookingsFuture = CompletableFuture.supplyAsync(
+                () -> bookingRepository.findProjectedByPgOwnerIdAndStatusIn(
+                        ownerId, List.of(BookingStatus.OWNER_ACCEPTED, BookingStatus.PENDING_OWNER))
         );
 
         CompletableFuture.allOf(propertiesFuture, bookingsFuture).join();
 
-        List<PG> properties = propertiesFuture.join();
-        List<Booking> bookings = bookingsFuture.join();
+        List<PGRepository.ActivityView> properties = propertiesFuture.join();
+        List<BookingRepository.RevenueView> bookings = bookingsFuture.join();
 
         int totalProperties = properties.size();
         int activeProperties = (int) properties.stream()
                 .filter(pg -> Boolean.TRUE.equals(pg.getIsActive()))
                 .count();
 
-        List<Booking> acceptedBookings = bookings.stream()
+        List<BookingRepository.RevenueView> acceptedBookings = bookings.stream()
                 .filter(b -> b.getStatus() == BookingStatus.OWNER_ACCEPTED)
                 .collect(Collectors.toList());
 
         int occupiedRoomsEstimate = acceptedBookings.size();
-        int pendingRequestsCount = (int) bookings.stream()
-                .filter(b -> b.getStatus() == BookingStatus.PENDING_OWNER)
-                .count();
+        int pendingRequestsCount = bookings.size() - acceptedBookings.size();
 
         double monthlyRevenueEstimate = acceptedBookings.stream()
                 .mapToDouble(b -> b.getMonthlyRent() != null ? b.getMonthlyRent() : 0.0)
                 .sum();
 
-        List<String> propertyIds = properties.stream().map(PG::getId).collect(Collectors.toList());
+        List<String> propertyIds = properties.stream().map(PGRepository.ActivityView::getId).collect(Collectors.toList());
         LocalDateTime todayStart = LocalDate.now().atStartOfDay();
         LocalDateTime todayEnd = todayStart.plusDays(1);
         long todaysViews = propertyIds.isEmpty() ? 0
@@ -88,7 +86,7 @@ public class OwnerDashboardServiceImpl implements OwnerDashboardService {
                 .build();
     }
 
-    private List<MonthlyRevenuePointDTO> buildRevenueTrend(List<Booking> acceptedBookings) {
+    private List<MonthlyRevenuePointDTO> buildRevenueTrend(List<BookingRepository.RevenueView> acceptedBookings) {
         YearMonth currentMonth = YearMonth.now();
         List<YearMonth> trailingMonths = new ArrayList<>();
         for (int i = TREND_MONTHS - 1; i >= 0; i--) {

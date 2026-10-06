@@ -25,5 +25,4 @@ public class OtpRequest {
     @Indexed(expireAfter = "1h")
     private LocalDateTime expiryAt;
     private int attempts;
-    private boolean verified;
 }

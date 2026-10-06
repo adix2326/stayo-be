@@ -22,7 +22,6 @@ public class PGView {
     private String id;
     @Indexed
     private String userId;
-    @Indexed
     private String propertyId;
     private LocalDateTime viewedAt;
 }
